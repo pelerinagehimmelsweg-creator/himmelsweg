@@ -10,6 +10,10 @@ export const ROLES = [
 
 export const nomRole = (id) => ROLES.find((r) => r.id === id)?.nom ?? id;
 
+/** Rôles liés à un chapitre : on les perd en quittant le chapitre. */
+export const ROLES_DE_CHAPITRE = ['chef', 'securite'];
+export const sansRolesDeChapitre = (roles) => (roles ?? []).filter((r) => !ROLES_DE_CHAPITRE.includes(r));
+
 export const GROUPES = { H: 'Hommes', F: 'Femmes' };
 
 export const PERIODES = [

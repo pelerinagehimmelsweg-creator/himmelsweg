@@ -17,6 +17,7 @@ import {
   doc,
   documentId,
   getDoc,
+  getDocs,
   initializeFirestore,
   onSnapshot,
   persistentLocalCache,
@@ -29,7 +30,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { REPAS_CONFIG_DEPART, texteAlerte } from './equipes.js';
-import { droits } from './modele.js';
+import { droits, sansRolesDeChapitre } from './modele.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART } from './questionnaire.js';
 
 export function creerFirebase(config, urlScript, cleVapid) {
@@ -143,6 +144,22 @@ export function creerFirebase(config, urlScript, cleVapid) {
     supprimerContenu: (id) => deleteDoc(doc(db, 'contenus', id)),
 
     ecouterChapitres: (cb) => liste(collection(db, 'chapitres'), cb),
+    async enregistrerChapitre({ id, ...c }) {
+      if (id) {
+        await setDoc(doc(db, 'chapitres', id), c);
+        return id;
+      }
+      return (await addDoc(collection(db, 'chapitres'), c)).id;
+    },
+    // Les pèlerins du chapitre supprimé redeviennent « sans chapitre » (et perdent chef / adjoint sécurité).
+    async supprimerChapitre(id) {
+      const lot = writeBatch(db);
+      (await getDocs(query(collection(db, 'membres'), where('chapitre', '==', id)))).forEach((d) =>
+        lot.update(d.ref, { chapitre: null, roles: sansRolesDeChapitre(d.data().roles) }),
+      );
+      lot.delete(doc(db, 'chapitres', id));
+      await lot.commit();
+    },
 
     // Questionnaire d'inscription (lisible par tous, même sans connexion)
     ecouterQuestions: (cb) => liste(collection(db, 'questions'), cb),
