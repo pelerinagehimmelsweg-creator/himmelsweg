@@ -112,3 +112,78 @@ button.encart { cursor: pointer; }
   .fiche { grid-template-columns: 1fr; gap: .1rem; }
   .fiche dd { margin-bottom: .5rem; }
 }
+
+/* Questionnaire (inscription, mes réponses, ajout par un admin) */
+.publique .page { padding-bottom: 3rem; }
+.formulaire fieldset.champ, fieldset.champ { border: 0; padding: 0; margin: 0 0 1rem; background: none; min-width: 0; }
+.champ { display: block; margin-bottom: 1rem; }
+.formulaire .champ { margin-bottom: 1rem; }
+.libelle, .formulaire legend.libelle { display: block; font-weight: 600; color: var(--encre); padding: 0; margin-bottom: .25rem; }
+.champ .aide { display: block; margin: 0 0 .3rem; font-weight: 400; }
+.etoile { color: var(--rouge); }
+.erreur { display: block; color: var(--rouge-fonce); font-weight: 700; font-size: .9rem; margin-top: .25rem; }
+.en-erreur input:not([type='checkbox']):not([type='radio']), .en-erreur select, .en-erreur textarea { border-color: var(--rouge) !important; background: #fff6f4; }
+.en-erreur .pilules label, .en-erreur canvas { border-color: var(--rouge); }
+.info-bloc { background: var(--creme); border-radius: 8px; padding: .6rem .8rem; }
+.pilules { display: flex; flex-wrap: wrap; gap: .4rem; }
+.formulaire .pilules label, .pilules label { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; margin: 0; padding: .4rem .95rem; border: 1.5px solid #cfc5ad; border-radius: 99px; background: var(--blanc); font-weight: 600; cursor: pointer; }
+.pilules label.choisi { border-color: var(--rouge); background: #fbe9e6; color: var(--rouge-fonce); }
+.pilules input { position: absolute; opacity: 0; pointer-events: none; }
+.pilules label:has(input:focus-visible) { outline: 3px solid #e9a99f; }
+.pilules.grandes label { flex: 1; justify-content: center; font-size: 1.05rem; }
+.tarifs { display: grid; gap: .4rem; }
+.formulaire .tarifs label, .tarifs label { display: flex; align-items: center; gap: .6rem; margin: 0; padding: .6rem .8rem; border: 1.5px solid #cfc5ad; border-radius: 10px; background: var(--blanc); cursor: pointer; font-weight: 400; }
+.tarifs label span { flex: 1; }
+.tarifs label.choisi { border-color: var(--rouge); background: #fbe9e6; }
+.tarifs input { width: 20px; height: 20px; accent-color: var(--rouge); margin: 0 !important; min-height: 0 !important; }
+.document { background: var(--creme); border-left: 3px solid var(--rouge); border-radius: 6px; padding: .6rem .8rem; margin: .2rem 0 .6rem; font-size: .97rem; }
+.signature label { font-weight: 400; }
+.signature canvas { display: block; width: 100%; max-width: 480px; aspect-ratio: 3 / 1; background: #fff; border: 1.5px dashed #b9ad92; border-radius: 8px; touch-action: none; cursor: crosshair; }
+.signature-pied { display: flex; justify-content: space-between; align-items: center; max-width: 480px; }
+.signature-image { display: block; max-width: 240px; width: 100%; margin-top: .3rem; background: #fff; border: 1px solid var(--creme-fonce); border-radius: 6px; }
+.personne { border-top: 4px solid var(--rouge); }
+.personne-titre { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.recap ul { list-style: none; margin: 0 0 1rem; padding: 0; }
+.recap li { display: flex; justify-content: space-between; gap: 1rem; padding: .35rem 0; border-bottom: 1px solid var(--creme-fonce); }
+.recap li small { color: var(--gris); }
+.recap li.total { border: 0; font-size: 1.15rem; color: var(--rouge-fonce); }
+.bouton.large { width: 100%; font-size: 1.1rem; margin-bottom: .6rem; }
+.bouton[disabled] { opacity: .6; cursor: wait; }
+.piege { position: absolute; left: -9999px; width: 1px; height: 1px; }
+.paiement-demo { border: 2px dashed #49b; background: #f3f8fc; }
+.encart ul { margin: .3rem 0 0; flex-basis: 100%; }
+a.encart { text-decoration: none; }
+
+/* Administration */
+.questions-admin { list-style: none; margin: 0 0 1rem; padding: 0; }
+.questions-admin li { display: flex; align-items: center; gap: .6rem; padding: .55rem 0; border-bottom: 1px solid var(--creme-fonce); }
+.questions-admin li.inactive .qa-texte { opacity: .5; }
+.qa-texte { flex: 1; min-width: 0; }
+.qa-texte small { display: block; color: var(--gris); font-size: .85rem; }
+.qa-actions { display: flex; gap: .3rem; align-items: center; flex: none; }
+.petit-bouton { width: 36px; height: 36px; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); cursor: pointer; }
+.petit-bouton[disabled] { opacity: .35; cursor: default; }
+.tarifs-admin { display: grid; gap: .6rem; margin-bottom: .4rem; }
+.tarif-ligne { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: .4rem; align-items: end; padding-bottom: .6rem; border-bottom: 1px solid var(--creme-fonce); }
+.tarif-ligne label { font-size: .85rem; color: var(--gris); margin: 0; }
+.tarif-ligne input:not([type='checkbox']) { width: 100%; min-height: 40px; padding: .35rem .5rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+.tarif-ligne.inactive { opacity: .55; }
+.carte h3 { font-size: 1rem; margin: 1rem 0 .3rem; }
+.carte .champ input, .carte .champ textarea, .carte .champ select { width: 100%; min-height: 44px; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+.dossiers { list-style: none; margin: 0; padding: 0; }
+.dossiers .carte p { margin: .3rem 0 0; }
+.dossier-tete { display: flex; justify-content: space-between; gap: .6rem; align-items: baseline; }
+.statut-paye, .statut-gratuit, .statut-valide_main { background: #e3f1e4; color: var(--vert); }
+.etiquette.attente, .statut-en_attente { background: #fbe3df; color: var(--rouge-fonce); }
+.valider { display: flex; align-items: center; gap: .5rem; margin-top: .6rem; font-size: .95rem; }
+.valider select { min-height: 40px; padding: .3rem .5rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+
+@media (max-width: 520px) {
+  .tarif-ligne { grid-template-columns: 1fr 1fr 1fr; }
+  .tarif-ligne .tl-nom { grid-column: 1 / -1; }
+  .questions-admin li { flex-wrap: wrap; }
+  .qa-actions { width: 100%; justify-content: flex-end; }
+}
+.formulaire input[type='checkbox'], .formulaire input[type='radio'] { width: 22px; height: 22px; min-height: 0; padding: 0; margin: 0; flex: none; accent-color: var(--rouge); }
+.formulaire label.case, .carte label.case { display: flex; align-items: flex-start; gap: .6rem; font-weight: 400; }
+.formulaire label.case input { margin-top: .15rem; }

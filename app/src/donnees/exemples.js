@@ -18,8 +18,32 @@ export const CHAPITRES = [
   { id: 'ch-therese', nom: 'Sainte-Thérèse', groupe: 'F' },
 ];
 
-const REGIMES = ['', '', '', '', 'Végétarien', 'Sans gluten', '', 'Sans lactose', ''];
+const REGIMES = ['Aucun', 'Aucun', 'Aucun', 'Aucun', 'Végétarien', 'Sans gluten', 'Aucun', 'Sans lactose', 'Aucun'];
 const SANTE = ['', '', 'Asthme léger, a sa ventoline', '', 'Allergie aux piqûres de guêpe', '', '', 'Genou fragile', ''];
+
+// Petit gribouillis pour les autorisations parentales fictives.
+const SIGNATURE =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><path d="M20 70 C50 10 70 90 100 50 S150 20 170 60 S230 80 280 30" fill="none" stroke="#1d2a4d" stroke-width="3"/></svg>');
+
+/** Dossier d'inscription fictif pour chaque pèlerin de démo (un par personne). */
+export function dossiersExemple(membres, tarifs) {
+  return membres.map((m) => {
+    const montant = tarifs.find((t) => t.id === m.tarif)?.montant ?? 0;
+    return {
+      id: m.dossier,
+      cree: `${m.inscritLe}T10:00:00Z`,
+      statut: m.statut === 'inscrit' ? 'paye' : 'en_attente',
+      montant,
+      don: 0,
+      payeur: { prenom: m.prenom, nom: m.nom, email: m.email },
+      membres: [m.id],
+      noms: [`${m.prenom} ${m.nom}`],
+      relances: m.statut === 'inscrit' ? 0 : 1,
+      liensEnvoyes: m.statut === 'inscrit',
+    };
+  });
+}
 
 export function membresExemple() {
   const res = [];
@@ -38,14 +62,26 @@ export function membresExemple() {
         chapitre: chs[i % 2],
         roles: ['pelerin'],
         volontaireChef: i === 2 || i === 7,
+        reponses: {
+          volontaireChef: i === 2 || i === 7 ? 'Oui' : 'Non',
+          ...(groupe === 'H' ? { aideLogistique: i % 3 === 0 ? 'Oui' : 'Non' } : {}),
+        },
         inscritLe: `2027-0${1 + (i % 3)}-1${i % 9}`,
+        statut: i === 11 ? 'en_attente' : 'inscrit',
+        tarif: mineur ? 'jeune' : i === 8 ? 'soutien' : 'adulte',
+        dossier: `d-${id}`,
         prive: {
           urgenceNom: `Proche de ${prenom}`,
           urgenceTel: `07 ${String(20 + i).padStart(2, '0')} 11 22 33`,
-          sante: SANTE[i % SANTE.length],
+          ...(SANTE[i % SANTE.length] ? { sante: SANTE[i % SANTE.length] } : {}),
           regime: REGIMES[i % REGIMES.length],
-          referentNom: mineur ? `Parent de ${prenom}` : '',
-          referentTel: mineur ? '06 99 88 77 66' : '',
+          ...(mineur
+            ? {
+                referentNom: `Parent de ${prenom}`,
+                referentTel: '06 99 88 77 66',
+                autorisationParentale: { image: SIGNATURE, signataire: `Parent de ${prenom}`, le: '2027-01-12' },
+              }
+            : {}),
           consentementSante: true,
         },
       });

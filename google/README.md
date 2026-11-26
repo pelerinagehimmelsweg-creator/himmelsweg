@@ -1,3 +1,5 @@
+> Le script de l'**application** (HelloAsso, liens personnels) est dans [`app/`](app/README.md).
+
 # Formulaires du site reliés au compte Google
 
 Les formulaires Contact et Entreprises envoient leurs messages à un petit script Google

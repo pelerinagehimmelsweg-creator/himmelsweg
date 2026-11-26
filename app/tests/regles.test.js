@@ -27,6 +27,10 @@ before(async () => {
     await setDoc(doc(db, 'membres/pelA/admin/lien'), { cle: 'abc' });
     await setDoc(doc(db, 'liens/abc'), { membreId: 'pelA' });
     await setDoc(doc(db, 'contenus/c1'), { titre: 'Liste' });
+    await setDoc(doc(db, 'questions/regime'), { libelle: 'Régime', type: 'choix' });
+    await setDoc(doc(db, 'config/inscription'), { ouverte: true, tarifs: [] });
+    await setDoc(doc(db, 'dossiers/d1'), { statut: 'en_attente', membres: ['pelA'], payeur: { email: 'x@y.fr' } });
+    await setDoc(doc(db, 'membres/pelA'), { statut: 'en_attente', tel: '06', reponses: {} }, { merge: true });
   });
 });
 after(() => env.cleanup());
@@ -102,4 +106,34 @@ test('les clés de liens personnels sont illisibles sauf par l’admin', async (
   await assertSucceeds(setDoc(doc(admin(), 'liens/nouvelle'), { membreId: 'pelA' }));
   await assertSucceeds(deleteDoc(doc(admin(), 'liens/abc')));
   await assertFails(setDoc(doc(membre('pelA'), 'liens/x'), { membreId: 'pelB' }));
+});
+
+test('le questionnaire et les tarifs sont publics, mais seuls les admins les modifient', async () => {
+  const anonyme = env.unauthenticatedContext().firestore();
+  await assertSucceeds(getDocs(collection(anonyme, 'questions')));
+  await assertSucceeds(getDoc(doc(anonyme, 'config/inscription')));
+  await assertFails(setDoc(doc(anonyme, 'questions/pirate'), { libelle: 'x' }));
+  await assertFails(setDoc(doc(membre('pelA'), 'config/inscription'), { ouverte: false }));
+  await assertSucceeds(setDoc(doc(admin(), 'questions/nouvelle'), { libelle: 'Taille de t-shirt', type: 'choix' }));
+  await assertSucceeds(setDoc(doc(admin(), 'config/inscription'), { ouverte: true, tarifs: [] }));
+});
+
+test('les dossiers d’inscription (paiements) sont réservés aux admins', async () => {
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'dossiers/d1')));
+  await assertFails(getDoc(doc(membre('pelA'), 'dossiers/d1')));
+  await assertFails(getDoc(doc(membre('logi'), 'dossiers/d1')));
+  await assertFails(setDoc(doc(membre('pelA'), 'dossiers/d1'), { statut: 'paye' }, { merge: true }));
+  await assertSucceeds(getDoc(doc(admin(), 'dossiers/d1')));
+  await assertSucceeds(setDoc(doc(admin(), 'dossiers/d1'), { statut: 'valide_main' }, { merge: true }));
+});
+
+test('un pèlerin corrige ses réponses, mais pas son paiement ni la fiche des autres', async () => {
+  const db = membre('pelA');
+  await assertSucceeds(setDoc(doc(db, 'membres/pelA'), { tel: '07 00 00 00 00', reponses: { volontaireChef: 'Oui' }, volontaireChef: true }, { merge: true }));
+  await assertSucceeds(setDoc(doc(db, 'membres/pelA/prive/fiche'), { sante: 'Rien', regime: 'Végétarien' }));
+  await assertFails(setDoc(doc(db, 'membres/pelA'), { statut: 'inscrit' }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelA'), { chapitre: 'B' }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelB'), { tel: '07' }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelB/prive/fiche'), { sante: 'x' }));
+  await assertFails(setDoc(doc(db, 'membres/pelA/admin/lien'), { cle: 'x' }));
 });
