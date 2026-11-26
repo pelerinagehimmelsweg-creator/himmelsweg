@@ -53,10 +53,21 @@ npm run test:regles   # lance une base d'essai locale (Java requis) et 10 tests 
 | `firebase/firestore.rules` | Règles de sécurité de la base |
 | `tests/regles.test.js` | Tests des règles |
 
-## Mise en ligne (plus tard, avec florent)
+## Mise en ligne
 
-1. Créer un projet Firebase gratuit avec pelerinagehimmelsweg@gmail.com, base Firestore en Europe.
-2. Copier `.env.exemple` en `.env.local` et y mettre la configuration du projet (valeurs non secrètes).
-3. Ajouter un document par admin dans la collection `admins` (identifiant = adresse Gmail en minuscules).
-4. Publier les règles et l'app (`firebase deploy`), puis relier `app.himmelsweg.fr` chez IONOS.
-5. Le script Google (à venir) récupère les inscrits HelloAsso, envoie les liens et ouvre les sessions.
+Projet Firebase : **himmelsweg-cbd26** (compte pelerinagehimmelsweg@gmail.com). Sa configuration publique est
+dans `.env.production` : `npm run build` produit l'app reliée à la vraie base, `npm run dev` reste en démo
+(ajouter `?demo` à l'adresse force la démo).
+
+Publication automatique par GitHub (`.github/workflows/app.yml`) à chaque modification de `app/` sur main :
+construction, tests des règles, puis publication de l'app et des règles. Il faut une fois :
+
+1. Firebase → Paramètres du projet → Comptes de service → « Générer une nouvelle clé privée » (fichier JSON).
+2. GitHub → Settings → Secrets and variables → Actions → New repository secret,
+   nom `FIREBASE_SERVICE_ACCOUNT`, valeur = tout le contenu du fichier. Puis supprimer le fichier.
+3. Firestore → collection `admins` : un document par admin, identifiant = adresse Gmail en minuscules.
+4. Authentication → Paramètres → Domaines autorisés : ajouter `app.himmelsweg.fr`.
+
+L'app répond alors sur https://himmelsweg-cbd26.web.app, puis sur app.himmelsweg.fr une fois le domaine relié
+(Firebase Hosting → Ajouter un domaine personnalisé, puis les lignes DNS indiquées chez IONOS).
+Le script Google (à venir) récupérera les inscrits HelloAsso, enverra les liens et ouvrira les sessions.
