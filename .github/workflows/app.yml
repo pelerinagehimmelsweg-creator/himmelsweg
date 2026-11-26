@@ -7,9 +7,9 @@ name: Publier l'app
 on:
   push:
     branches: [main]
-    paths: ['app/**', '.github/workflows/app.yml']
+    paths: ['app/**', 'google/app/**', '.github/workflows/app.yml']
   pull_request:
-    paths: ['app/**', '.github/workflows/app.yml']
+    paths: ['app/**', 'google/app/**', '.github/workflows/app.yml']
   workflow_dispatch:
 
 permissions:
@@ -35,6 +35,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test:regles
+      - name: Tests du script Google
+        run: node --test ../google/app/script.test.mjs
 
   publier:
     needs: verifier
@@ -56,7 +58,7 @@ jobs:
         env:
           CLE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$CLE" ]; then echo "Secret FIREBASE_SERVICE_ACCOUNT absent : publication sautée."; exit 0; fi
+          if [ -z "$CLE" ]; then echo "::error::Secret FIREBASE_SERVICE_ACCOUNT absent : publication impossible."; exit 1; fi
           printf '%s' "$CLE" > "$RUNNER_TEMP/cle.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/cle.json"
           npx firebase deploy --only hosting,firestore:rules --project himmelsweg-cbd26 --non-interactive
