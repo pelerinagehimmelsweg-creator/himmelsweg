@@ -1,14 +1,11 @@
 ---
 title: Inscription
-description: Inscription au pèlerinage Himmelsweg, 7-8-9 mai 2027. Inscription uniquement en ligne, places limitées.
-widgets:
-  - titre: Pèlerines (femmes)
-    url: ""
-  - titre: Pèlerins (hommes)
-    url: ""
+description: Inscription au pèlerinage Himmelsweg, 7-8-9 mai 2027. Inscription uniquement en ligne.
 ---
-L'inscription se fait uniquement en ligne et le nombre de places est limité. Le paiement est sécurisé par HelloAsso.
+L'inscription se fait uniquement en ligne. Vous pouvez inscrire plusieurs personnes à la fois (par exemple toute une famille), hommes et femmes, puis payer en une seule fois. Le paiement est sécurisé par HelloAsso.
 
-Les femmes et les hommes s'inscrivent séparément : choisissez votre formulaire ci-dessous.
+**[S'inscrire en ligne →](https://app.himmelsweg.fr/inscription)**
+
+Après le paiement, chaque personne inscrite reçoit par e-mail son lien personnel vers l'application du pèlerinage.
 
 Une question avant de vous inscrire ? Consultez les [informations pratiques](/informations-pratiques/) ou écrivez à secretariat@himmelsweg.fr.

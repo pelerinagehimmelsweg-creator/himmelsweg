@@ -1,6 +1,11 @@
+import { Fragment } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
+import { ChampQuestion } from '../composants/champs.jsx';
 import { GROUPES, ROLES, age, droits, estMineur, nomRole } from '../donnees/modele.js';
+import { CHAMPS_FICHE, enTexte, erreursPersonne, estVisible, questionsTriees, reponsesDe, versFiche } from '../donnees/questionnaire.js';
+
+const enAttente = (m) => m.statut === 'en_attente';
 
 const nomComplet = (m) => `${m.prenom ?? ''} ${m.nom ?? ''}`.trim();
 
@@ -23,6 +28,7 @@ export function ListeMembres({ donnees, session }) {
         if (filtre === 'volontaires') return m.volontaireChef && !m.roles?.includes('chef');
         if (filtre === 'mineurs') return estMineur(m);
         if (filtre === 'sans-chapitre') return !m.chapitre;
+        if (filtre === 'en-attente') return enAttente(m);
         return m.roles?.includes(filtre);
       })
       .filter((m) => !q || `${nomComplet(m)} ${m.email ?? ''}`.toLowerCase().includes(q))
@@ -32,7 +38,9 @@ export function ListeMembres({ donnees, session }) {
   if (ajout) return <AjoutMembre donnees={donnees} chapitres={chapitres} fermer={() => setAjout(false)} />;
   if (membres === null) return <p class="discret">Chargement…</p>;
 
-  const compte = (g) => membres.filter((m) => m.groupe === g).length;
+  const confirmes = membres.filter((m) => !enAttente(m));
+  const compte = (g) => confirmes.filter((m) => m.groupe === g).length;
+  const attente = membres.length - confirmes.length;
   const volontaires = membres.filter((m) => m.volontaireChef && !m.roles?.includes('chef')).length;
 
   return (
@@ -42,7 +50,7 @@ export function ListeMembres({ donnees, session }) {
       {d.voirTousLesMembres && (
       <div class="chiffres">
         <div>
-          <strong>{membres.length}</strong>
+          <strong>{confirmes.length}</strong>
           <span>inscrits</span>
         </div>
         <div>
@@ -54,6 +62,11 @@ export function ListeMembres({ donnees, session }) {
           <span>femmes</span>
         </div>
       </div>
+      )}
+      {d.admin && attente > 0 && (
+        <a class="encart" href="#/admin/inscriptions">
+          {attente} inscription{attente > 1 ? 's' : ''} en attente de paiement
+        </a>
       )}
       {d.admin && volontaires > 0 && (
         <button type="button" class="encart" onClick={() => setFiltre('volontaires')}>
@@ -77,6 +90,7 @@ export function ListeMembres({ donnees, session }) {
           <option value="volontaires">Volontaires chef à valider</option>
           <option value="mineurs">Mineurs</option>
           {d.admin && <option value="sans-chapitre">Sans chapitre</option>}
+          {d.admin && <option value="en-attente">Paiement en attente</option>}
         </select>
       </div>
       <ul class="liste-membres">
@@ -93,6 +107,7 @@ export function ListeMembres({ donnees, session }) {
                   {estMineur(m) && ' · mineur'}
                 </small>
               </span>
+              {enAttente(m) && <span class="etiquette attente">paiement en attente</span>}
               {m.volontaireChef && !m.roles?.includes('chef') && <span class="etiquette">volontaire chef</span>}
             </a>
           </li>
@@ -112,6 +127,7 @@ export function FicheMembre({ donnees, session, id }) {
   const membres = useAbonnement((cb) => donnees.ecouterMembres(cb), [donnees, session.id], null);
   const chapitres = useAbonnement((cb) => donnees.ecouterChapitres(cb), [donnees], []);
   const prive = useAbonnement((cb) => donnees.ecouterPrive(id, cb), [donnees, id], null);
+  const questions = useAbonnement((cb) => donnees.ecouterQuestions(cb), [donnees], []);
   const [lien, setLien] = useState('');
   const [msg, setMsg] = useState('');
   const admin = droits(session).admin;
@@ -134,6 +150,29 @@ export function FicheMembre({ donnees, session, id }) {
     modifier({ roles: ROLES.map((x) => x.id).filter((x) => roles.has(x)) });
   };
   const chapitresDuGroupe = chapitres.filter((c) => c.groupe === m.groupe);
+  const reponses = reponsesDe(m, prive);
+  const affichees = questionsTriees(questions).filter(
+    (q) => q.type !== 'info' && !CHAMPS_FICHE.includes(q.id) && estVisible(q, m.groupe, reponses),
+  );
+  const valeur = (q) => {
+    const v = reponses[q.id];
+    if (q.type === 'telephone' && v) return <a href={`tel:${String(v).replace(/\s/g, '')}`}>{v}</a>;
+    if (q.type === 'signature' && v?.image)
+      return (
+        <>
+          {enTexte(q, v)}
+          <img class="signature-image" src={v.image} alt="" />
+        </>
+      );
+    return enTexte(q, v);
+  };
+  const lignes = (liste) =>
+    liste.map((q) => (
+      <Fragment key={q.id}>
+        <dt>{q.libelle}</dt>
+        <dd>{valeur(q)}</dd>
+      </Fragment>
+    ));
   const montrerLien = async (nouveau) => {
     if (nouveau && !confirm('L’ancien lien ne marchera plus. Continuer ?')) return;
     setLien(await donnees.lienPersonnel(id, { nouveau }));
@@ -173,6 +212,21 @@ export function FicheMembre({ donnees, session, id }) {
               chapitres.find((c) => c.id === m.chapitre)?.nom ?? '—'
             )}
           </dd>
+          {admin && (
+            <>
+              <dt>Inscription</dt>
+              <dd>
+                {enAttente(m) ? (
+                  <a href="#/admin/inscriptions">Paiement en attente</a>
+                ) : (
+                  'Confirmée'
+                )}
+                {m.tarif && ` · tarif ${m.tarif}`}
+                {m.inscritLe && ` · le ${new Date(m.inscritLe).toLocaleDateString('fr-FR')}`}
+              </dd>
+            </>
+          )}
+          {lignes(affichees.filter((q) => q.visibilite !== 'sensible'))}
         </dl>
       </section>
 
@@ -203,34 +257,13 @@ export function FicheMembre({ donnees, session, id }) {
       </section>
 
       <section class="carte sensible">
-        <h2>Santé et contacts d’urgence</h2>
+        <h2>🔒 Informations protégées</h2>
         {prive === null ? (
           <p class="discret">Chargement…</p>
         ) : prive.refuse ? (
           <p class="discret">Accès réservé aux admins, à la logistique et à l’adjoint sécurité du chapitre.</p>
         ) : (
-          <dl class="fiche">
-            <dt>Contact d’urgence</dt>
-            <dd>
-              {prive.urgenceNom || '—'}{' '}
-              {prive.urgenceTel && <a href={`tel:${prive.urgenceTel.replace(/\s/g, '')}`}>{prive.urgenceTel}</a>}
-            </dd>
-            <dt>Santé</dt>
-            <dd>{prive.sante || 'Rien de signalé'}</dd>
-            <dt>Régime alimentaire</dt>
-            <dd>{prive.regime || 'Aucun'}</dd>
-            {estMineur(m) && (
-              <>
-                <dt>Référent (mineur)</dt>
-                <dd>
-                  {prive.referentNom || '—'}{' '}
-                  {prive.referentTel && <a href={`tel:${prive.referentTel.replace(/\s/g, '')}`}>{prive.referentTel}</a>}
-                </dd>
-              </>
-            )}
-            <dt>Consentement santé</dt>
-            <dd>{prive.consentementSante ? 'Donné' : 'Non donné'}</dd>
-          </dl>
+          <dl class="fiche">{lignes(affichees.filter((q) => q.visibilite === 'sensible'))}</dl>
         )}
       </section>
 
@@ -261,108 +294,71 @@ export function FicheMembre({ donnees, session, id }) {
 }
 
 function AjoutMembre({ donnees, chapitres, fermer }) {
-  const [m, setM] = useState({ prenom: '', nom: '', groupe: 'F', email: '', tel: '', dateNaissance: '', chapitre: '' });
-  const [p, setP] = useState({ urgenceNom: '', urgenceTel: '', sante: '', regime: '', referentNom: '', referentTel: '', consentementSante: false });
+  const questions = useAbonnement((cb) => donnees.ecouterQuestions(cb), [donnees], []);
+  const [groupe, setGroupe] = useState('F');
+  const [chapitre, setChapitre] = useState('');
+  const [reponses, setReponses] = useState({});
+  const [erreurs, setErreurs] = useState({});
   const [erreur, setErreur] = useState('');
-  const cm = (k) => (e) => setM({ ...m, [k]: e.currentTarget.value });
-  const cp = (k) => (e) => setP({ ...p, [k]: e.currentTarget.type === 'checkbox' ? e.currentTarget.checked : e.currentTarget.value });
+  const triees = questionsTriees(questions);
 
   const envoyer = async (e) => {
     e.preventDefault();
+    // Un admin peut laisser des réponses vides ; seuls le nom et le prénom sont exigés.
+    const err = erreursPersonne(triees, { groupe, reponses });
+    const bloquant = Object.fromEntries(Object.entries(err).filter(([k, v]) => ['prenom', 'nom'].includes(k) || !v.includes('obligatoire') && !v.includes('cocher') && !v.includes('Signature')));
+    setErreurs(bloquant);
+    if (Object.keys(bloquant).length) return setErreur('Vérifiez les réponses signalées.');
+    const { membre, prive } = versFiche(triees, groupe, reponses);
     try {
-      const id = await donnees.ajouterMembre({ ...m, chapitre: m.chapitre || null, volontaireChef: false }, p);
+      const id = await donnees.ajouterMembre({ ...membre, chapitre: chapitre || null }, prive);
       location.hash = `#/pelerins/${id}`;
-    } catch (err) {
-      setErreur(err.message);
+    } catch (er) {
+      setErreur(er.message);
     }
   };
 
   return (
-    <form class="formulaire" onSubmit={envoyer}>
+    <form class="formulaire" onSubmit={envoyer} noValidate>
       <h1>Ajouter un pèlerin</h1>
-      <p class="discret">Normalement, les inscrits arrivent tout seuls depuis HelloAsso. Ce formulaire sert aux cas particuliers.</p>
+      <p class="discret">
+        Normalement, chacun s’inscrit lui-même sur app.himmelsweg.fr/inscription. Ce formulaire sert aux cas particuliers (inscription
+        papier, par téléphone…). Seuls le prénom et le nom sont exigés.
+      </p>
       {erreur && <p class="alerte">{erreur}</p>}
       <div class="deux">
         <label>
-          Prénom
-          <input required value={m.prenom} onInput={cm('prenom')} />
+          Groupe
+          <select
+            value={groupe}
+            onChange={(e) => {
+              setGroupe(e.currentTarget.value);
+              setChapitre('');
+            }}
+          >
+            <option value="F">Femmes</option>
+            <option value="H">Hommes</option>
+          </select>
         </label>
         <label>
-          Nom
-          <input required value={m.nom} onInput={cm('nom')} />
+          Chapitre
+          <select value={chapitre} onChange={(e) => setChapitre(e.currentTarget.value)}>
+            <option value="">Plus tard</option>
+            {chapitres
+              .filter((c) => c.groupe === groupe)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nom}
+                </option>
+              ))}
+          </select>
         </label>
       </div>
-      <label>
-        Groupe
-        <select value={m.groupe} onChange={(e) => setM({ ...m, groupe: e.currentTarget.value, chapitre: '' })}>
-          <option value="F">Femmes</option>
-          <option value="H">Hommes</option>
-        </select>
-      </label>
-      <label>
-        Chapitre
-        <select value={m.chapitre} onChange={cm('chapitre')}>
-          <option value="">Plus tard</option>
-          {chapitres
-            .filter((c) => c.groupe === m.groupe)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
-            ))}
-        </select>
-      </label>
-      <div class="deux">
-        <label>
-          E-mail
-          <input type="email" value={m.email} onInput={cm('email')} />
-        </label>
-        <label>
-          Téléphone
-          <input type="tel" value={m.tel} onInput={cm('tel')} />
-        </label>
-      </div>
-      <label>
-        Date de naissance
-        <input type="date" value={m.dateNaissance} onInput={cm('dateNaissance')} />
-      </label>
-      <fieldset>
-        <legend>Informations protégées</legend>
-        <div class="deux">
-          <label>
-            Contact d’urgence
-            <input value={p.urgenceNom} onInput={cp('urgenceNom')} />
-          </label>
-          <label>
-            Son téléphone
-            <input type="tel" value={p.urgenceTel} onInput={cp('urgenceTel')} />
-          </label>
-        </div>
-        <label>
-          Santé (à signaler)
-          <input value={p.sante} onInput={cp('sante')} />
-        </label>
-        <label>
-          Régime alimentaire
-          <input value={p.regime} onInput={cp('regime')} />
-        </label>
-        {estMineur(m) && (
-          <div class="deux">
-            <label>
-              Référent du mineur
-              <input required value={p.referentNom} onInput={cp('referentNom')} />
-            </label>
-            <label>
-              Son téléphone
-              <input type="tel" required value={p.referentTel} onInput={cp('referentTel')} />
-            </label>
-          </div>
-        )}
-        <label class="case">
-          <input type="checkbox" checked={p.consentementSante} onChange={cp('consentementSante')} />
-          La personne accepte que ses informations de santé soient connues des responsables sécurité.
-        </label>
-      </fieldset>
+      {triees
+        .filter((q) => estVisible(q, groupe, reponses) && q.type !== 'info')
+        .map((q) => (
+          <ChampQuestion key={q.id} q={q} valeur={reponses[q.id]} erreur={erreurs[q.id]} changer={(v) => setReponses({ ...reponses, [q.id]: v })} />
+        ))}
       <div class="actions">
         <button class="bouton">Ajouter</button>
         <button type="button" class="bouton secondaire" onClick={fermer}>

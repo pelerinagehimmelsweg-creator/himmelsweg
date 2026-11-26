@@ -5,7 +5,8 @@ import { droits } from './donnees/modele.js';
 import { Connexion } from './ecrans/connexion.jsx';
 import { Contenus } from './ecrans/contenus.jsx';
 import { FicheMembre, ListeMembres } from './ecrans/membres.jsx';
-import { Moi } from './ecrans/moi.jsx';
+import { AdminInscriptions, AdminQuestionnaire } from './ecrans/admin.jsx';
+import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
 
 function periodeDuJour(aujourdhui = new Date().toISOString().slice(0, 10)) {
   if (aujourdhui > '2027-05-09') return 'apres';
@@ -58,10 +59,13 @@ export function App({ donnees }) {
     ...(voitDesPelerins ? [{ id: 'pelerins', nom: d.admin ? 'Pèlerins' : 'Mon équipe' }] : []),
     { id: 'moi', nom: 'Moi' },
   ];
-  const actif = onglets.some((o) => o.id === page) ? page : periodeDuJour();
+  const actif = onglets.some((o) => o.id === page) ? page : page === 'admin' && d.admin ? 'moi' : periodeDuJour();
 
   let contenu;
-  if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;
+  if (page === 'admin' && d.admin) {
+    contenu = sous === 'questionnaire' ? <AdminQuestionnaire donnees={donnees} /> : <AdminInscriptions donnees={donnees} />;
+  } else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
+  else if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;
   else if (actif === 'pelerins') contenu = <ListeMembres donnees={donnees} session={session} />;
   else if (actif === 'moi') contenu = <Moi donnees={donnees} session={session} />;
   else contenu = <Contenus donnees={donnees} session={session} periode={actif} />;

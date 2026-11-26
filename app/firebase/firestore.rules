@@ -43,6 +43,22 @@ service cloud.firestore {
       allow write: if estAdmin();
     }
 
+    // Questionnaire d'inscription et tarifs : lus par tout le monde (formulaire public),
+    // modifiés par les admins. Les inscriptions elles-mêmes passent par le script Google.
+    match /questions/{id} {
+      allow read: if true;
+      allow write: if estAdmin();
+    }
+    match /config/{id} {
+      allow read: if true;
+      allow write: if estAdmin();
+    }
+
+    // Dossiers d'inscription (payeur, montant, paiement) : admins seulement.
+    match /dossiers/{ref} {
+      allow read, write: if estAdmin();
+    }
+
     // Fiches des pèlerins (nom, téléphone, chapitre, rôles).
     match /membres/{id} {
       allow read: if estAdmin()
@@ -50,6 +66,9 @@ service cloud.firestore {
         || aRole('logistique')
         || ((aRole('chef') || aRole('securite')) && memeChapitre(resource.data.get('chapitre', null)));
       allow write: if estAdmin();
+      // Le pèlerin corrige ses propres réponses, sans toucher à son chapitre, ses rôles ni son paiement.
+      allow update: if connecte() && request.auth.uid == id
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tel', 'email', 'reponses', 'volontaireChef']);
 
       // Données sensibles : santé, contact d'urgence, régime, référent des mineurs.
       match /prive/{doc} {
@@ -58,6 +77,7 @@ service cloud.firestore {
           || aRole('logistique')
           || (aRole('securite') && memeChapitre(get(/databases/$(database)/documents/membres/$(id)).data.get('chapitre', null)));
         allow write: if estAdmin();
+        allow update: if connecte() && request.auth.uid == id && doc == 'fiche';
       }
 
       // Clé du lien personnel : admins seulement.

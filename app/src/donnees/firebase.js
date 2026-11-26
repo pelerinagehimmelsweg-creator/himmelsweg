@@ -26,8 +26,10 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { droits } from './modele.js';
+import { CONFIG_DEPART, QUESTIONS_DEPART } from './questionnaire.js';
 
 export function creerFirebase(config, urlScript) {
   const app = initializeApp(config);
@@ -56,6 +58,7 @@ export function creerFirebase(config, urlScript) {
         estAdmin = (await getDoc(doc(db, 'admins', user.email.toLowerCase()))).exists();
       } catch {}
       if (estAdmin) {
+        installerQuestionnaire().catch(() => {});
         return publier({ id: user.uid, prenom: user.displayName || user.email, nom: '', email: user.email, estAdmin: true, roles: [] });
       }
       await signOut(auth);
@@ -68,6 +71,37 @@ export function creerFirebase(config, urlScript) {
       () => publier({ refuse: 'Fiche inaccessible.' }),
     );
   });
+
+  // Première connexion d'un admin : on installe le questionnaire et les tarifs de départ.
+  async function installerQuestionnaire() {
+    if ((await getDoc(doc(db, 'config', 'inscription'))).exists()) return;
+    const lot = writeBatch(db);
+    lot.set(doc(db, 'config', 'inscription'), { ...CONFIG_DEPART, ouverte: false });
+    QUESTIONS_DEPART.forEach(({ id, ...q }) => lot.set(doc(db, 'questions', id), q));
+    await lot.commit();
+  }
+
+  // Appel au script Google (inscription, paiement HelloAsso, connexion par lien).
+  async function script(action, donnees) {
+    if (!urlScript) throw new Error('Les inscriptions en ligne ne sont pas encore branchées. Réessayez bientôt.');
+    let rep;
+    try {
+      rep = await fetch(urlScript, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action, ...donnees }),
+      });
+    } catch {
+      throw new Error('Pas de connexion internet. Réessayez quand le réseau revient.');
+    }
+    const json = await rep.json();
+    if (json.erreur) {
+      const e = new Error(json.erreur);
+      e.details = json.details;
+      throw e;
+    }
+    return json;
+  }
 
   const liste = (q, cb) =>
     onSnapshot(
@@ -89,14 +123,7 @@ export function creerFirebase(config, urlScript) {
       await signInWithPopup(auth, new GoogleAuthProvider());
     },
     async connexionLien(cle) {
-      if (!urlScript) throw new Error('Connexion par lien pas encore configurée.');
-      const rep = await fetch(urlScript, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'connexion', cle }),
-      });
-      const { jeton, erreur } = await rep.json();
-      if (!jeton) throw new Error(erreur || 'Ce lien n’est plus valable. Demandez-en un nouveau au secrétariat.');
+      const { jeton } = await script('connexion', { cle });
       await signInWithCustomToken(auth, jeton);
     },
     async deconnexion() {
@@ -115,6 +142,38 @@ export function creerFirebase(config, urlScript) {
     supprimerContenu: (id) => deleteDoc(doc(db, 'contenus', id)),
 
     ecouterChapitres: (cb) => liste(collection(db, 'chapitres'), cb),
+
+    // Questionnaire d'inscription (lisible par tous, même sans connexion)
+    ecouterQuestions: (cb) => liste(collection(db, 'questions'), cb),
+    ecouterConfig: (cb) =>
+      onSnapshot(
+        doc(db, 'config', 'inscription'),
+        (d) => cb(d.data() ?? false),
+        () => cb(false),
+      ),
+    enregistrerQuestion: ({ id, ...q }) => setDoc(doc(db, 'questions', id), q),
+    async enregistrerQuestions(questions) {
+      const lot = writeBatch(db);
+      questions.forEach(({ id, ...q }) => lot.set(doc(db, 'questions', id), q));
+      await lot.commit();
+    },
+    supprimerQuestion: (id) => deleteDoc(doc(db, 'questions', id)),
+    enregistrerConfig: (c) => setDoc(doc(db, 'config', 'inscription'), c),
+
+    // Inscription publique : tout passe par le script Google, qui vérifie et calcule le prix.
+    inscrire: (demande) => script('inscription', demande),
+    etatInscription: (ref) => script('verifier', { ref }),
+    payerInscription: (ref) => script('payer', { ref }),
+
+    ecouterDossiers: (cb) => liste(collection(db, 'dossiers'), cb),
+    // Chèque, espèces… : le script Google enverra les liens dans les 15 minutes.
+    async validerDossier(ref, mode) {
+      const lot = writeBatch(db);
+      const d = (await getDoc(doc(db, 'dossiers', ref))).data();
+      lot.update(doc(db, 'dossiers', ref), { statut: 'valide_main', mode, regleLe: serverTimestamp(), validePar: session?.email ?? '' });
+      (d?.membres ?? []).forEach((id) => lot.update(doc(db, 'membres', id), { statut: 'inscrit' }));
+      await lot.commit();
+    },
 
     ecouterMembres(cb) {
       const s = session;
@@ -136,6 +195,7 @@ export function creerFirebase(config, urlScript) {
     async ajouterMembre(champs, prive) {
       const ref = await addDoc(collection(db, 'membres'), {
         roles: ['pelerin'],
+        statut: 'inscrit',
         ...champs,
         inscritLe: new Date().toISOString().slice(0, 10),
       });
@@ -143,6 +203,11 @@ export function creerFirebase(config, urlScript) {
       return ref.id;
     },
     modifierMembre: (id, champs) => updateDoc(doc(db, 'membres', id), champs),
+    // Le pèlerin corrige ses réponses (la base n'autorise que ces champs-là).
+    async modifierMesReponses(id, champs, prive) {
+      await updateDoc(doc(db, 'membres', id), champs);
+      await setDoc(doc(db, 'membres', id, 'prive', 'fiche'), prive);
+    },
     modifierPrive: (id, champs) => setDoc(doc(db, 'membres', id, 'prive', 'fiche'), champs, { merge: true }),
 
     // Lien personnel : une clé secrète, rangée dans « liens » (illisible par les téléphones).

@@ -1,25 +1,76 @@
-// Tests du script Google, sans Google : on simule les services Apps Script.
-// Lancer depuis la racine du dépôt : node --test google/app/
+// Tests du script Google, sans Google : on simule Apps Script, la base Firestore et HelloAsso.
+// Lancer depuis la racine du dépôt : node --test google/app/script.test.mjs
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
+import { CONFIG_DEPART, QUESTIONS_DEPART } from '../../app/src/donnees/questionnaire.js';
+import { noyau } from './copier-noyau.mjs';
 
+const CODE = readFileSync(new URL('./Code.gs', import.meta.url), 'utf8');
 const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const CLE_SA = {
   client_email: 'firebase-adminsdk-test@himmelsweg-cbd26.iam.gserviceaccount.com',
   private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }),
 };
+const BASE = 'https://firestore.googleapis.com/v1/projects/himmelsweg-cbd26/databases/(default)/documents';
 
-function charger({ proprietes = {}, reponses = () => ({ code: 200, corps: '{}' }) } = {}) {
+function charger({ proprietes = {}, base = {}, paye = () => false, maintenant } = {}) {
   const appels = [];
   const emails = [];
-  const props = { FIREBASE_CLE: JSON.stringify(CLE_SA), ...proprietes };
+  const intentions = [];
+  const docs = new Map();
+  const props = {
+    FIREBASE_CLE: JSON.stringify(CLE_SA),
+    HELLOASSO_CLIENT_ID: 'id',
+    HELLOASSO_CLIENT_SECRET: 'secret',
+    HELLOASSO_ORGANISATION: 'asso',
+    ...proprietes,
+  };
   const cache = {};
   const b64ws = (x) => Buffer.from(x).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
+  const rep = (code, corps) => ({ code, corps: typeof corps === 'string' ? corps : JSON.stringify(corps) });
+
+  const repondre = (url, opts) => {
+    if (url.endsWith('oauth2.googleapis.com/token')) return rep(200, { access_token: 'g' });
+    if (url.endsWith('api.helloasso.com/oauth2/token')) return rep(200, { access_token: 'h', expires_in: 1800 });
+    if (url.endsWith('/checkout-intents') && opts.method === 'post') {
+      const id = 1000 + intentions.length;
+      intentions.push({ id, corps: JSON.parse(opts.payload) });
+      return rep(200, { id, redirectUrl: `https://www.helloasso.com/paiement/${id}` });
+    }
+    const mi = /\/checkout-intents\/(\d+)$/.exec(url);
+    if (mi) return rep(200, paye(Number(mi[1])) ? { id: Number(mi[1]), order: { id: 55, payments: [{ state: 'Authorized' }] } } : { id: Number(mi[1]) });
+    if (url.endsWith(':commit')) {
+      const { writes } = JSON.parse(opts.payload);
+      const chemins = writes.map((w) => w.update.name.split('/documents/')[1]);
+      if (writes.some((w, i) => w.currentDocument?.exists === false && docs.has(chemins[i]))) return rep(409, 'ALREADY_EXISTS');
+      writes.forEach((w, i) => {
+        const avant = docs.get(chemins[i]) ?? {};
+        if (w.updateMask) {
+          const n = { ...avant };
+          w.updateMask.fieldPaths.forEach((k) => (n[k] = w.update.fields[k]));
+          docs.set(chemins[i], n);
+        } else docs.set(chemins[i], w.update.fields);
+      });
+      return rep(200, {});
+    }
+    if (url.startsWith(BASE + '/')) {
+      const [chemin] = url.slice(BASE.length + 1).split('?');
+      if (url.includes('?pageSize')) {
+        const documents = [...docs.keys()]
+          .filter((k) => k.startsWith(chemin + '/') && !k.slice(chemin.length + 1).includes('/'))
+          .map((k) => ({ name: `projects/x/databases/(default)/documents/${k}`, fields: docs.get(k) }));
+        return rep(200, { documents });
+      }
+      return docs.has(chemin) ? rep(200, { fields: docs.get(chemin) }) : rep(404, '');
+    }
+    return rep(404, '');
+  };
+
   const ctx = {
-    console,
+    console: { error: () => {}, log: console.log },
     Logger: { log: () => {} },
     PropertiesService: {
       getScriptProperties: () => ({
@@ -29,7 +80,7 @@ function charger({ proprietes = {}, reponses = () => ({ code: 200, corps: '{}' }
       }),
     },
     CacheService: { getScriptCache: () => ({ get: (k) => cache[k] ?? null, put: (k, v) => (cache[k] = v) }) },
-    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
+    LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock: () => {}, releaseLock: () => {} }) },
     Utilities: {
       base64EncodeWebSafe: (x) => b64ws(typeof x === 'string' ? Buffer.from(x, 'utf8') : Buffer.from(x)),
       computeRsaSha256Signature: (texte, cle) => [...crypto.sign('sha256', Buffer.from(texte), cle)],
@@ -40,7 +91,7 @@ function charger({ proprietes = {}, reponses = () => ({ code: 200, corps: '{}' }
     UrlFetchApp: {
       fetch: (url, opts = {}) => {
         appels.push({ url, opts });
-        const r = reponses(url, opts);
+        const r = repondre(url, opts);
         return { getResponseCode: () => r.code, getContentText: () => r.corps };
       },
     },
@@ -50,69 +101,218 @@ function charger({ proprietes = {}, reponses = () => ({ code: 200, corps: '{}' }
       MimeType: { JSON: 'json' },
     },
   };
+  if (maintenant) {
+    const VraiDate = Date;
+    ctx.Date = class extends VraiDate {
+      constructor(...a) {
+        super(...(a.length ? a : [maintenant()]));
+      }
+      static now() {
+        return maintenant();
+      }
+    };
+  }
   vm.createContext(ctx);
-  vm.runInContext(readFileSync(new URL('./Code.gs', import.meta.url), 'utf8') + '\n;this.__ = { ficheDepuisHelloAsso, enChamps, depuisChamps, enDateIso, synchroniser, doPost };', ctx);
-  return { ...ctx.__, appels, emails, props };
+  vm.runInContext(CODE + '\n;this.__ = { enChamps, depuisChamps, doPost, suivre };', ctx);
+  const s = ctx.__;
+  const ecrire = (chemin, valeurs) => docs.set(chemin, s.enChamps(valeurs));
+  for (const [k, v] of Object.entries(base)) ecrire(k, v);
+  const lire = (chemin) => (docs.has(chemin) ? JSON.parse(JSON.stringify(s.depuisChamps(docs.get(chemin)))) : null);
+  const appeler = (demande) => JSON.parse(s.doPost({ postData: { contents: JSON.stringify(demande) } }).texte);
+  return { ...s, appels, emails, intentions, props, docs, ecrire, lire, appeler };
 }
 
-const ITEM = {
-  id: 987654,
-  state: 'Processed',
-  order: { date: '2027-01-15T10:20:00+01:00' },
-  payer: { email: 'Parent@Exemple.fr', firstName: 'Paul', lastName: 'Ott' },
-  user: { firstName: 'Françoise', lastName: 'Ott' },
-  customFields: [
-    { name: 'Date de naissance', answer: '15/09/2010' },
-    { name: 'Téléphone portable', answer: '06 15 25 35 45' },
-    { name: 'Contact en cas d’urgence : nom', answer: 'Paul Ott' },
-    { name: 'Contact en cas d’urgence : téléphone', answer: '07 25 11 22 33' },
-    { name: 'Informations de santé à signaler', answer: 'Asthme léger' },
-    { name: 'Régime alimentaire', answer: 'Sans gluten' },
-    { name: 'Pour les mineurs : nom du référent adulte', answer: 'Anne Ott' },
-    { name: 'Pour les mineurs : téléphone du référent', answer: '06 99 88 77 66' },
-    { name: 'Je me propose comme chef de chapitre', answer: 'Non' },
-    { name: 'J’accepte que mes informations de santé soient connues des responsables sécurité', answer: 'Oui' },
-  ],
+/** Base avec le questionnaire et les tarifs de départ. */
+const BASE_DEPART = {
+  'config/inscription': CONFIG_DEPART,
+  ...Object.fromEntries(QUESTIONS_DEPART.map(({ id, ...q }) => [`questions/${id}`, q])),
 };
 
-test('une inscription HelloAsso devient une fiche complète', () => {
-  const { ficheDepuisHelloAsso } = charger();
-  const f = ficheDepuisHelloAsso(ITEM, 'F');
-  assert.deepEqual(JSON.parse(JSON.stringify(f.membre)), {
+const ADULTE = {
+  groupe: 'H',
+  tarif: 'adulte',
+  reponses: {
+    prenom: 'Paul',
+    nom: 'Ott',
+    dateNaissance: '1980-03-02',
+    email: '',
+    tel: '06 15 25 35 45',
+    urgenceNom: 'Anne Ott',
+    urgenceTel: '07 25 11 22 33',
+    sante: 'Genou fragile',
+    regime: 'Sans gluten',
+    volontaireChef: 'Oui',
+    aideLogistique: 'Non',
+    consentementSante: true,
+  },
+};
+const MINEURE = {
+  groupe: 'F',
+  tarif: 'jeune',
+  reponses: {
     prenom: 'Françoise',
     nom: 'Ott',
-    groupe: 'F',
-    email: 'parent@exemple.fr',
-    tel: '06 15 25 35 45',
     dateNaissance: '2010-09-15',
-    chapitre: null,
-    roles: ['pelerin'],
-    volontaireChef: false,
-    inscritLe: '2027-01-15',
-    helloassoId: '987654',
-  });
-  assert.deepEqual(JSON.parse(JSON.stringify(f.prive)), {
+    email: 'Francoise@Exemple.fr',
+    tel: '06 99 88 77 66',
     urgenceNom: 'Paul Ott',
     urgenceTel: '07 25 11 22 33',
-    sante: 'Asthme léger',
-    regime: 'Sans gluten',
+    regime: 'Aucun',
     referentNom: 'Anne Ott',
-    referentTel: '06 99 88 77 66',
+    referentTel: '06 11 22 33 44',
+    autorisationParentale: { image: 'data:image/png;base64,AAAA', signataire: 'Paul Ott', le: '2027-01-15' },
+    volontaireChef: 'Non',
+    aideLogistique: 'Oui', // question réservée aux hommes : ne doit pas être gardée
     consentementSante: true,
-  });
+  },
+};
+const PAYEUR = { prenom: 'Paul', nom: 'Ott', email: 'Paul@Exemple.fr' };
+
+test('le noyau du questionnaire est le même dans l’app et dans le script', () => {
+  const source = readFileSync(new URL('../../app/src/donnees/questionnaire.js', import.meta.url), 'utf8');
+  assert.equal(noyau(CODE), noyau(source), 'Lancer : node google/app/copier-noyau.mjs');
 });
 
-test('un adulte : pas de référent, volontaire chef reconnu, régime « Aucun » vide', () => {
-  const { ficheDepuisHelloAsso } = charger();
-  const item = structuredClone(ITEM);
-  item.customFields[0].answer = '1980-03-02';
-  item.customFields[5].answer = 'Aucun';
-  item.customFields[8].answer = 'Oui';
-  const f = ficheDepuisHelloAsso(item, 'H');
-  assert.equal(f.membre.dateNaissance, '1980-03-02');
-  assert.equal(f.membre.volontaireChef, true);
-  assert.equal(f.prive.regime, '');
-  assert.equal(f.prive.referentNom, '');
+test('une inscription crée les fiches et prépare le paiement HelloAsso au bon prix', () => {
+  const s = charger({ base: BASE_DEPART });
+  const r = s.appeler({ action: 'inscription', personnes: [ADULTE, MINEURE], payeur: PAYEUR, don: 1000, reglement: true, montant: 1 });
+  assert.match(r.redirectUrl, /helloasso\.com\/paiement\/1000/);
+
+  const [{ corps }] = s.intentions;
+  assert.equal(corps.totalAmount, 5500 + 3500 + 1000); // le « montant » envoyé par l'app est ignoré
+  assert.equal(corps.initialAmount, corps.totalAmount);
+  assert.equal(corps.containsDonation, true);
+  assert.deepEqual(corps.payer, { firstName: 'Paul', lastName: 'Ott', email: 'paul@exemple.fr' });
+  assert.equal(corps.returnUrl, `https://app.himmelsweg.fr/inscription/merci?ref=${r.ref}`);
+
+  const dossier = s.lire(`dossiers/${r.ref}`);
+  assert.equal(dossier.statut, 'en_attente');
+  assert.equal(dossier.montant, 10000);
+  assert.equal(dossier.checkoutId, '1000');
+  assert.deepEqual(dossier.noms, ['Paul Ott', 'Françoise Ott']);
+
+  const [idPaul, idFrancoise] = dossier.membres;
+  const paul = s.lire(`membres/${idPaul}`);
+  assert.equal(paul.email, 'paul@exemple.fr'); // vide : celle du payeur
+  assert.equal(paul.statut, 'en_attente');
+  assert.equal(paul.volontaireChef, true);
+  assert.deepEqual(paul.reponses, { volontaireChef: 'Oui', aideLogistique: 'Non' });
+  assert.deepEqual(s.lire(`membres/${idPaul}/prive/fiche`), {
+    urgenceNom: 'Anne Ott',
+    urgenceTel: '07 25 11 22 33',
+    sante: 'Genou fragile',
+    regime: 'Sans gluten',
+    consentementSante: true,
+  });
+  const francoise = s.lire(`membres/${idFrancoise}`);
+  assert.equal(francoise.email, 'francoise@exemple.fr');
+  assert.deepEqual(francoise.reponses, { volontaireChef: 'Non' }); // pas la question des hommes
+  const priveF = s.lire(`membres/${idFrancoise}/prive/fiche`);
+  assert.equal(priveF.referentNom, 'Anne Ott');
+  assert.equal(priveF.autorisationParentale.signataire, 'Paul Ott');
+  assert.ok(s.lire(`membres/${idFrancoise}/admin/lien`).cle);
+  assert.equal(s.emails.length, 0); // pas de lien avant le paiement
+});
+
+test('le serveur refuse les réponses incomplètes et les tarifs qui ne vont pas avec l’âge', () => {
+  const s = charger({ base: BASE_DEPART });
+  const sansSignature = structuredClone(MINEURE);
+  delete sansSignature.reponses.autorisationParentale;
+  const r1 = s.appeler({ action: 'inscription', personnes: [sansSignature], payeur: PAYEUR, reglement: true });
+  assert.ok(r1.erreur);
+  assert.equal(r1.details[0].autorisationParentale, 'Signature nécessaire.');
+
+  const triche = structuredClone(ADULTE);
+  triche.tarif = 'jeune';
+  const r2 = s.appeler({ action: 'inscription', personnes: [triche], payeur: PAYEUR, reglement: true });
+  assert.ok(r2.details[0].tarif);
+
+  const r3 = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: false });
+  assert.match(r3.erreur, /règlement/);
+  assert.equal(s.intentions.length, 0);
+  assert.equal([...s.docs.keys()].filter((k) => k.startsWith('membres/')).length, 0);
+});
+
+test('inscriptions fermées par les admins : refus', () => {
+  const s = charger({ base: { ...BASE_DEPART, 'config/inscription': { ...CONFIG_DEPART, ouverte: false } } });
+  assert.match(s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: true }).erreur, /fermées/);
+});
+
+test('paiement reçu : fiches inscrites et un lien par personne, une seule fois', () => {
+  let paye = false;
+  const s = charger({ base: BASE_DEPART, paye: () => paye });
+  const { ref } = s.appeler({ action: 'inscription', personnes: [ADULTE, MINEURE], payeur: PAYEUR, reglement: true });
+  assert.equal(s.appeler({ action: 'verifier', ref }).statut, 'en_attente');
+  paye = true;
+  const v = s.appeler({ action: 'verifier', ref });
+  assert.equal(v.statut, 'paye');
+  const dossier = s.lire(`dossiers/${ref}`);
+  assert.equal(dossier.liensEnvoyes, true);
+  dossier.membres.forEach((id) => assert.equal(s.lire(`membres/${id}`).statut, 'inscrit'));
+  assert.deepEqual(
+    s.emails.map((e) => e[0]),
+    ['paul@exemple.fr', 'francoise@exemple.fr'],
+  );
+  const [, sujet, texte, options] = s.emails[1];
+  assert.match(sujet, /Françoise/);
+  assert.match(texte, /https:\/\/app\.himmelsweg\.fr\/#cle=[A-Za-z0-9_-]{32}/);
+  assert.equal(options.from, 'secretariat@himmelsweg.fr');
+  s.suivre();
+  s.appeler({ action: 'verifier', ref });
+  assert.equal(s.emails.length, 2);
+});
+
+test('tarif à 0 € : inscription confirmée tout de suite, sans HelloAsso', () => {
+  const s = charger({ base: BASE_DEPART });
+  const pretre = { ...structuredClone(ADULTE), tarif: 'religieux' };
+  const r = s.appeler({ action: 'inscription', personnes: [pretre], payeur: PAYEUR, reglement: true });
+  assert.equal(r.gratuit, true);
+  assert.equal(s.intentions.length, 0);
+  assert.equal(s.lire(`dossiers/${r.ref}`).statut, 'gratuit');
+  assert.equal(s.emails.length, 1);
+});
+
+test('relances après 3 puis 10 jours, puis plus rien', () => {
+  let t = Date.parse('2027-01-01T10:00:00Z');
+  const s = charger({ base: BASE_DEPART, maintenant: () => t });
+  const { ref } = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: true });
+  s.suivre();
+  assert.equal(s.emails.length, 0);
+  t += 3.1 * 86400000;
+  s.suivre();
+  s.suivre();
+  assert.equal(s.emails.length, 1);
+  assert.match(s.emails[0][2], new RegExp(`/inscription/payer\\?ref=${ref}`));
+  t += 7 * 86400000;
+  s.suivre();
+  t += 30 * 86400000;
+  s.suivre();
+  assert.equal(s.emails.length, 2);
+});
+
+test('paiement validé à la main par un admin : le suivi envoie les liens', () => {
+  const s = charger({ base: BASE_DEPART });
+  const { ref } = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: true });
+  const d = s.lire(`dossiers/${ref}`);
+  s.ecrire(`dossiers/${ref}`, { ...d, statut: 'valide_main', mode: 'chèque' });
+  s.suivre();
+  assert.equal(s.emails.length, 1);
+  assert.equal(s.lire(`membres/${d.membres[0]}`).statut, 'inscrit');
+});
+
+test('payer à nouveau crée un nouveau paiement et garde la trace de l’ancien', () => {
+  const s = charger({ base: BASE_DEPART });
+  const { ref } = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: true });
+  const r = s.appeler({ action: 'payer', ref });
+  assert.match(r.redirectUrl, /paiement\/1001/);
+  assert.deepEqual(s.lire(`dossiers/${ref}`).paiements, ['1000']);
+  assert.ok(s.appeler({ action: 'payer', ref: 'inconnue_1234567890' }).erreur);
+});
+
+test('un robot qui remplit la case piège ne crée rien', () => {
+  const s = charger({ base: BASE_DEPART });
+  s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: PAYEUR, reglement: true, piege: 'x' });
+  assert.equal(s.docs.size, Object.keys(BASE_DEPART).length);
 });
 
 test('les valeurs passent sans perte vers la base et retour', () => {
@@ -121,59 +321,18 @@ test('les valeurs passent sans perte vers la base et retour', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(depuisChamps(enChamps(o)))), o);
 });
 
-test('synchroniser crée la fiche, envoie le lien une seule fois', () => {
-  const s = charger({
-    proprietes: {
-      HELLOASSO_CLIENT_ID: 'id',
-      HELLOASSO_CLIENT_SECRET: 'secret',
-      HELLOASSO_ORGANISATION: 'asso',
-      FORMULAIRE_FEMMES: 'pelerines-2027',
-    },
-    reponses: (url) => {
-      if (url.endsWith('/oauth2/token')) return { code: 200, corps: JSON.stringify({ access_token: 'jeton', expires_in: 1800 }) };
-      if (url.endsWith('oauth2.googleapis.com/token')) return { code: 200, corps: JSON.stringify({ access_token: 'g' }) };
-      if (url.includes('/items')) return { code: 200, corps: JSON.stringify({ data: [ITEM], pagination: {} }) };
-      if (url.endsWith(':commit')) return { code: 200, corps: '{}' };
-      return { code: 404, corps: '' };
-    },
-  });
-  s.synchroniser();
-  s.synchroniser(); // deuxième passage : rien de nouveau
-  const commits = s.appels.filter((a) => a.url.endsWith(':commit'));
-  assert.equal(commits.length, 1);
-  const ecritures = JSON.parse(commits[0].opts.payload).writes;
-  assert.match(ecritures[0].update.name, /documents\/membres\/ha-987654$/);
-  assert.deepEqual(ecritures[0].currentDocument, { exists: false });
-  assert.match(ecritures[1].update.name, /membres\/ha-987654\/prive\/fiche$/);
-  assert.match(ecritures[2].update.name, /documents\/liens\/[A-Za-z0-9_-]{32}$/);
-  assert.equal(s.emails.length, 1);
-  const [a, sujet, texte, options] = s.emails[0];
-  assert.equal(a, 'parent@exemple.fr');
-  assert.match(sujet, /Himmelsweg/);
-  assert.match(texte, /https:\/\/app\.himmelsweg\.fr\/#cle=[A-Za-z0-9_-]{32}/);
-  assert.equal(options.from, 'secretariat@himmelsweg.fr');
-  assert.equal(JSON.parse(s.props.IMPORTES).length, 1);
-});
-
 test('connexion : une clé valable donne un jeton Firebase correctement signé', () => {
-  const s = charger({
-    reponses: (url) => {
-      if (url.endsWith('oauth2.googleapis.com/token')) return { code: 200, corps: JSON.stringify({ access_token: 'g' }) };
-      if (url.endsWith('/liens/CleValable_1234567890')) return { code: 200, corps: JSON.stringify({ fields: { membreId: { stringValue: 'ha-987654' } } }) };
-      return { code: 404, corps: '' };
-    },
-  });
-  const ok = JSON.parse(s.doPost({ postData: { contents: JSON.stringify({ action: 'connexion', cle: 'CleValable_1234567890' }) } }).texte);
+  const s = charger({ base: { 'liens/CleValable_1234567890': { membreId: 'i-987654' } } });
+  const ok = s.appeler({ action: 'connexion', cle: 'CleValable_1234567890' });
   const [h, c, sig] = ok.jeton.split('.');
   assert.ok(crypto.verify('sha256', Buffer.from(h + '.' + c), publicKey, Buffer.from(sig, 'base64url')));
   const contenu = JSON.parse(Buffer.from(c, 'base64url'));
-  assert.equal(contenu.uid, 'ha-987654');
+  assert.equal(contenu.uid, 'i-987654');
   assert.equal(contenu.iss, CLE_SA.client_email);
   assert.equal(contenu.aud, 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit');
   assert.ok(contenu.exp - contenu.iat <= 3600);
 
-  const refus = JSON.parse(s.doPost({ postData: { contents: JSON.stringify({ action: 'connexion', cle: 'CleInconnue_123456789' }) } }).texte);
+  const refus = s.appeler({ action: 'connexion', cle: 'CleInconnue_123456789' });
   assert.ok(!refus.jeton && refus.erreur);
-  const bidon = JSON.parse(s.doPost({ postData: { contents: JSON.stringify({ action: 'connexion', cle: '../admins/x' }) } }).texte);
-  assert.ok(!bidon.jeton);
+  assert.ok(!s.appeler({ action: 'connexion', cle: '../admins/x' }).jeton);
 });
