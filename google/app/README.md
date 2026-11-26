@@ -37,6 +37,21 @@ on colle l'identifiant et le secret à l'étape 2, **jamais dans un chat ni dans
    accès **Tout le monde**. Copier l'adresse qui finit par `/exec` et la donner à Claude
    (elle n'est pas secrète) : elle va dans `app/.env.production` (`VITE_SCRIPT_URL`).
 
+## 3. La clé GitHub, pour modifier le site depuis l'app
+
+L'écran **Moi → Modifier le site** enregistre les textes et photos de himmelsweg.fr dans le dépôt GitHub ;
+le site se met à jour tout seul en 1 à 2 minutes. Le script a besoin d'une clé limitée à ce dépôt :
+
+1. Sur GitHub, connecté avec le compte **pelerinagehimmelsweg-creator** : photo de profil → **Settings** →
+   **Developer settings** (tout en bas) → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. Nom : « App Himmelsweg – site ». Expiration : la plus longue proposée (noter la date pour la renouveler).
+3. **Repository access** : *Only select repositories* → **himmelsweg**.
+4. **Permissions** → **Repository permissions** → **Contents** : *Read and write*. Rien d'autre.
+5. **Generate token**, copier la clé (elle commence par `github_pat_`) et la coller dans les propriétés du script
+   sous le nom `GITHUB_CLE`. **Jamais dans un chat ni dans le code.**
+
+Quand la clé expire, l'écran du site l'indique : en recréer une et remplacer `GITHUB_CLE`.
+
 ## Bon à savoir
 
 - Gmail gratuit : 100 e-mails par jour. Largement assez pour les liens au fil des inscriptions.

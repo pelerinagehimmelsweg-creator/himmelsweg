@@ -8,12 +8,14 @@
  *  2. toutes les 15 minutes, il regarde les paiements reçus, envoie les liens personnels
  *     et relance les inscriptions non payées (après 3 jours puis 10 jours) ;
  *  3. il envoie les e-mails depuis Gmail, au nom de secretariat@himmelsweg.fr ;
- *  4. quand quelqu'un ouvre son lien, il vérifie la clé et ouvre sa session dans l'app.
+ *  4. quand quelqu'un ouvre son lien, il vérifie la clé et ouvre sa session dans l'app ;
+ *  5. il enregistre sur GitHub les modifications du site faites dans l'app (écran « Site » des admins).
  *
  * Réglages : Paramètres du projet → Propriétés du script (jamais dans le code ni dans un chat).
  *   HELLOASSO_CLIENT_ID, HELLOASSO_CLIENT_SECRET : clé API HelloAsso
  *   HELLOASSO_ORGANISATION : association-pour-le-culte-catholique-traditionnel-en-alsace
  *   FIREBASE_CLE : contenu complet du fichier JSON de la clé du compte de service Firebase
+ *   GITHUB_CLE : clé GitHub limitée au dépôt himmelsweg (droit « Contents : read and write »)
  * Installation pas à pas : google/app/README.md
  */
 
@@ -26,6 +28,11 @@ const RELANCES_JOURS = [3, 10];
 const MAX_PERSONNES = 10;
 // Clé web publique du projet Firebase (la même que dans l'app) : sert à vérifier qui appelle.
 const CLE_WEB = 'AIzaSyAr-mO39_gnd3-nzPpzyqXD7ns5xpruWtA';
+// Site himmelsweg.fr : textes et photos dans le dépôt GitHub, publiés à chaque modification de main.
+const DEPOT_SITE = 'pelerinagehimmelsweg-creator/himmelsweg';
+const BRANCHE_SITE = 'main';
+const SITE_TEXTES = /^site\/src\/content\/(pages\/[a-z0-9-]+\.md|site\/[a-z0-9-]+\.yml)$/;
+const SITE_PHOTOS = /^site\/src\/assets\/photos\/[a-z0-9-]+\.(jpg|jpeg|png|webp|gif)$/;
 
 /* ------------------------------------------------------------------ */
 /* À lancer une fois à la main : vérifie les réglages et programme le  */
@@ -63,6 +70,7 @@ function doPost(e) {
     if (demande.action === 'payer') return json_(payer_(demande.ref));
     if (demande.action === 'verifier') return json_(verifier_(demande.ref));
     if (demande.action === 'notifier') return json_(notifier_(demande));
+    if (demande.action === 'site') return json_(site_(demande));
     return json_({ erreur: 'Demande invalide.' });
   } catch (err) {
     console.error(err);
@@ -369,7 +377,7 @@ function qui_(idToken) {
   const u = (JSON.parse(rep.getContentText()).users || [])[0];
   if (!u) throw refus_('Session expirée : rouvrez l’app et réessayez.');
   const email = u.email && u.emailVerified ? String(u.email).toLowerCase() : '';
-  return { uid: u.localId, admin: !!email && !!lireDocument_('admins/' + encodeURIComponent(email)) };
+  return { uid: u.localId, email, admin: !!email && !!lireDocument_('admins/' + encodeURIComponent(email)) };
 }
 
 /**
@@ -601,6 +609,86 @@ function envoyer_(a, sujet, texte, lien, bouton) {
 /* ------------------------------------------------------------------ */
 /* 4. Connexion par lien personnel                                     */
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* Site himmelsweg.fr : lecture et enregistrement sur GitHub (admins)  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * op 'lire' : tous les textes du site, la liste des photos et le schéma de l'éditeur (.pages.yml).
+ * op 'ecrire' : enregistre un texte (chemin, contenu, sha de la version lue : refusé si quelqu'un l'a changé entre-temps).
+ * op 'photo' : ajoute une photo (chemin, base64). op 'supprimer' : supprime une page (chemin, sha).
+ */
+function site_(d) {
+  const appelant = qui_(d.idToken);
+  if (!appelant.admin) throw refus_('Réservé aux administrateurs.');
+  if (!PropertiesService.getScriptProperties().getProperty('GITHUB_CLE')) {
+    throw refus_('La clé GitHub n’est pas encore installée dans le script Google (propriété GITHUB_CLE).');
+  }
+  const qui = appelant.email || 'un admin';
+  if (d.op === 'lire') {
+    const dossiers = ['site/src/content/pages', 'site/src/content/site', 'site/src/assets/photos'].map((c) => github_('GET', 'contents/' + c + '?ref=' + BRANCHE_SITE));
+    const textes = dossiers[0].concat(dossiers[1]).filter((f) => f.type === 'file' && SITE_TEXTES.test(f.path));
+    const reps = lireTous_(textes.map((f) => 'contents/' + f.path + '?ref=' + BRANCHE_SITE).concat(['contents/.pages.yml?ref=' + BRANCHE_SITE]));
+    const schema = reps.pop();
+    return {
+      fichiers: reps.map((f) => ({ chemin: f.path, sha: f.sha, contenu: texteBase64_(f.content) })),
+      photos: dossiers[2].filter((f) => f.type === 'file').map((f) => f.name),
+      schema: texteBase64_(schema.content),
+    };
+  }
+  if (d.op === 'ecrire') {
+    if (!SITE_TEXTES.test(d.chemin || '')) throw refus_('Fichier non modifiable depuis l’app.');
+    const corps = { message: 'Site : ' + d.chemin.split('/').pop() + ' modifié depuis l’app (' + qui + ')', content: Utilities.base64Encode(String(d.contenu || ''), Utilities.Charset.UTF_8), branch: BRANCHE_SITE };
+    if (d.sha) corps.sha = d.sha;
+    const r = github_('PUT', 'contents/' + d.chemin, corps);
+    return { sha: r.content.sha };
+  }
+  if (d.op === 'photo') {
+    if (!SITE_PHOTOS.test(d.chemin || '')) throw refus_('Nom de photo invalide.');
+    if (String(d.base64 || '').length > 14000000) throw refus_('Photo trop lourde (10 Mo au plus).');
+    github_('PUT', 'contents/' + d.chemin, { message: 'Site : photo ' + d.chemin.split('/').pop() + ' ajoutée depuis l’app (' + qui + ')', content: String(d.base64), branch: BRANCHE_SITE });
+    return { chemin: d.chemin };
+  }
+  if (d.op === 'supprimer') {
+    if (!/^site\/src\/content\/pages\/[a-z0-9-]+\.md$/.test(d.chemin || '')) throw refus_('Seules les pages peuvent être supprimées.');
+    github_('DELETE', 'contents/' + d.chemin, { message: 'Site : page ' + d.chemin.split('/').pop() + ' supprimée depuis l’app (' + qui + ')', sha: d.sha, branch: BRANCHE_SITE });
+    return { ok: true };
+  }
+  throw refus_('Demande invalide.');
+}
+
+function enteteGithub_() {
+  return { Authorization: 'Bearer ' + PropertiesService.getScriptProperties().getProperty('GITHUB_CLE'), Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+}
+
+function github_(methode, chemin, corps) {
+  const opts = { method: methode.toLowerCase(), headers: enteteGithub_(), muteHttpExceptions: true };
+  if (corps) {
+    opts.contentType = 'application/json';
+    opts.payload = JSON.stringify(corps);
+  }
+  const rep = UrlFetchApp.fetch('https://api.github.com/repos/' + DEPOT_SITE + '/' + chemin, opts);
+  return reponseGithub_(rep);
+}
+
+function reponseGithub_(rep) {
+  const code = rep.getResponseCode();
+  if (code === 409 || code === 422) throw refus_('Ce texte a été modifié ailleurs entre-temps. Rechargez la page du site et refaites la modification.');
+  if (code === 401 || code === 403) throw refus_('La clé GitHub est refusée (expirée ou sans le droit « Contents »). Recréez-la et recollez-la dans GITHUB_CLE.');
+  if (code >= 300) throw new Error('GitHub ' + code + ' : ' + rep.getContentText().slice(0, 300));
+  return JSON.parse(rep.getContentText() || '{}');
+}
+
+/** Plusieurs lectures GitHub en parallèle. */
+function lireTous_(chemins) {
+  const demandes = chemins.map((c) => ({ url: 'https://api.github.com/repos/' + DEPOT_SITE + '/' + c, headers: enteteGithub_(), muteHttpExceptions: true }));
+  return UrlFetchApp.fetchAll(demandes).map(reponseGithub_);
+}
+
+function texteBase64_(b64) {
+  return Utilities.newBlob(Utilities.base64Decode(String(b64 || '').replace(/\s/g, ''))).getDataAsString('UTF-8');
+}
 
 function json_(objet) {
   return ContentService.createTextOutput(JSON.stringify(objet)).setMimeType(ContentService.MimeType.JSON);

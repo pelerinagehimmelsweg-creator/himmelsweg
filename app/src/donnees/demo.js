@@ -352,6 +352,23 @@ export function creerDemo() {
     async activerNotifications() {
       return 'Notifications activées (démo).';
     },
+    // Site : en démo, on part des vrais textes du site et rien ne part sur GitHub.
+    async siteLire() {
+      exigerAdmin();
+      return (await import('./site-demo.js')).lireDemo();
+    },
+    async siteEcrire(chemin, contenu) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).ecrireDemo(chemin, contenu);
+    },
+    async sitePhoto(chemin) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).photoDemo(chemin);
+    },
+    async siteSupprimer(chemin) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).supprimerDemo(chemin);
+    },
     async envoyerNotification({ cible, valeur }) {
       exigerAdmin();
       const n = etat.membres.filter(

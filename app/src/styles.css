@@ -241,3 +241,50 @@ h1 .pastille { display: inline-grid; vertical-align: middle; margin-right: .3rem
 .orga-personne a, .bloc-groupe .lien-ligne { text-decoration: none; color: var(--encre); font-weight: 600; }
 .bloc-groupe .lien-ligne strong { color: var(--rouge-fonce); }
 .orga-personne small { display: block; color: var(--gris); font-size: .82rem; }
+
+/* Éditeur du site (pensé pour l'ordinateur) */
+.page.large { max-width: 1280px; }
+.site-grille { display: grid; gap: 1rem; }
+.site-menu ul { list-style: none; margin: 0 0 .6rem; padding: 0; }
+.site-menu h2 { font-size: 1rem; margin: .2rem 0 .4rem; }
+.site-menu h2 + ul { margin-top: 0; }
+.site-menu li button { width: 100%; text-align: left; background: none; border: 0; border-radius: 6px; padding: .4rem .5rem; cursor: pointer; color: var(--encre); font: inherit; }
+.site-menu li button:hover { background: var(--creme); }
+.site-menu li button[aria-current] { background: #fbe9e6; color: var(--rouge-fonce); font-weight: 700; }
+.site-menu .bouton { margin-bottom: 1rem; }
+.site-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.site-tete h2 { margin: 0; }
+.site-champ { margin-bottom: 1rem; }
+.site-libelle { display: block; font-weight: 700; margin-bottom: .25rem; }
+.site-champ input[type=text], .site-champ input[type=number], .site-champ select, .site-champ textarea { width: 100%; min-height: 40px; padding: .45rem .65rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); font: inherit; }
+.site-champ textarea { resize: vertical; line-height: 1.45; }
+.site-champ .aide, .site-groupe > .aide { display: block; color: var(--gris); font-size: .85rem; margin-bottom: .3rem; }
+.requis { color: var(--rouge); }
+.site-groupe { border: 1px solid var(--creme-fonce); border-radius: 10px; padding: .6rem .9rem .8rem; margin: 0 0 1rem; }
+.site-groupe legend { font-weight: 700; padding: 0 .3rem; }
+.site-element { border: 1px solid var(--creme-fonce); border-radius: 8px; padding: .4rem .7rem; margin-bottom: .6rem; background: #fffdf8; }
+.site-element summary { cursor: pointer; font-weight: 600; padding: .2rem 0; }
+.site-element[open] summary { margin-bottom: .6rem; }
+.site-element-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.site-photo { display: flex; gap: .8rem; flex-wrap: wrap; align-items: flex-start; }
+.site-photo > img, .site-photo-vide { width: 180px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--creme-fonce); background: var(--creme); }
+.site-photo-vide { display: grid; place-items: center; color: var(--gris); font-size: .9rem; }
+.site-photo-actions { display: flex; flex-direction: column; gap: .4rem; align-items: flex-start; }
+.site-galerie { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .5rem; max-height: 320px; overflow: auto; padding: .4rem; border: 1px solid var(--creme-fonce); border-radius: 8px; }
+.site-galerie button { padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; }
+.site-galerie button:hover { border-color: var(--rouge); }
+.site-galerie img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 4px; }
+.barre-outils { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .3rem; }
+.barre-outils button { min-height: 32px; padding: .2rem .6rem; border: 1px solid #cfc5ad; border-radius: 6px; background: var(--blanc); cursor: pointer; font: inherit; font-size: .9rem; }
+.barre-outils button:hover { border-color: var(--rouge); }
+.texte-riche-corps { display: grid; gap: .6rem; }
+.apercu { border: 1px dashed #cfc5ad; border-radius: 8px; padding: .5rem .9rem; background: #fffdf8; font-size: .95rem; overflow-wrap: anywhere; }
+.apercu h3 { font-size: 1.1rem; margin: .6rem 0 .3rem; }
+.apercu blockquote { margin: .5rem 0; padding-left: .8rem; border-left: 3px solid var(--rouge); color: var(--gris); }
+.site-actions { position: sticky; bottom: calc(4.4rem + var(--bas)); display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; background: var(--creme); padding: .6rem 0; }
+@media (min-width: 900px) {
+  .site-grille { grid-template-columns: 240px minmax(0, 1fr); align-items: start; }
+  .site-menu { position: sticky; top: 1rem; max-height: calc(100vh - 7rem); overflow: auto; }
+  .texte-riche-corps { grid-template-columns: 1fr 1fr; }
+  .texte-riche-corps textarea { min-height: 180px; }
+}

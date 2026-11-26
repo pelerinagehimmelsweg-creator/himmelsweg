@@ -265,6 +265,11 @@ export function creerFirebase(config, urlScript, cleVapid) {
       await setDoc(doc(db, 'jetons', auth.currentUser.uid), { token, maj: new Date().toISOString() });
       return 'Notifications activées sur ce téléphone.';
     },
+    // Site himmelsweg.fr : lu et enregistré sur GitHub par le script Google (admins seulement).
+    siteLire: async () => script('site', { op: 'lire', idToken: await auth.currentUser.getIdToken() }),
+    siteEcrire: async (chemin, contenu, sha) => script('site', { op: 'ecrire', idToken: await auth.currentUser.getIdToken(), chemin, contenu, sha }),
+    sitePhoto: async (chemin, base64) => script('site', { op: 'photo', idToken: await auth.currentUser.getIdToken(), chemin, base64 }),
+    siteSupprimer: async (chemin, sha) => script('site', { op: 'supprimer', idToken: await auth.currentUser.getIdToken(), chemin, sha }),
     async envoyerNotification({ cible, valeur, titre, texte }) {
       return script('notifier', { idToken: await auth.currentUser.getIdToken(), cible, valeur, titre, texte });
     },

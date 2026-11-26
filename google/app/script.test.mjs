@@ -16,7 +16,9 @@ const CLE_SA = {
 };
 const BASE = 'https://firestore.googleapis.com/v1/projects/himmelsweg-cbd26/databases/(default)/documents';
 
-function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, sessions = {} } = {}) {
+function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, sessions = {}, depot = {} } = {}) {
+  const github = new Map(Object.entries(depot).map(([k, v]) => [k, { contenu: v, sha: 'sha-' + k.length }]));
+  const commits = [];
   const envoisFcm = [];
   const appels = [];
   const emails = [];
@@ -34,6 +36,32 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
   const rep = (code, corps) => ({ code, corps: typeof corps === 'string' ? corps : JSON.stringify(corps) });
 
   const repondre = (url, opts) => {
+    const mg = /^https:\/\/api\.github\.com\/repos\/pelerinagehimmelsweg-creator\/himmelsweg\/contents\/([^?]+)/.exec(url);
+    if (mg) {
+      if (opts.headers?.Authorization !== 'Bearer cle-gh') return rep(401, 'Bad credentials');
+      const chemin = mg[1];
+      const methode = opts.method ?? 'get';
+      if (methode === 'get') {
+        if (github.has(chemin)) {
+          const f = github.get(chemin);
+          return rep(200, { type: 'file', path: chemin, name: chemin.split('/').pop(), sha: f.sha, content: Buffer.from(f.contenu).toString('base64').replace(/(.{60})/g, '$1\n') });
+        }
+        const liste = [...github.keys()].filter((k) => k.startsWith(chemin + '/') && !k.slice(chemin.length + 1).includes('/'));
+        return rep(200, liste.map((k) => ({ type: 'file', path: k, name: k.split('/').pop(), sha: github.get(k).sha })));
+      }
+      const corps = JSON.parse(opts.payload);
+      const existe = github.get(chemin);
+      if (existe && corps.sha !== existe.sha) return rep(409, 'conflict');
+      if (!existe && corps.sha) return rep(404, 'Not Found');
+      commits.push({ methode, chemin, message: corps.message, branche: corps.branch });
+      if (methode === 'delete') {
+        github.delete(chemin);
+        return rep(200, {});
+      }
+      const sha = 'sha-' + commits.length;
+      github.set(chemin, { contenu: Buffer.from(corps.content, 'base64').toString('utf8'), sha });
+      return rep(200, { content: { sha } });
+    }
     if (url.endsWith('oauth2.googleapis.com/token')) return rep(200, { access_token: 'g' });
     if (url.endsWith('api.helloasso.com/oauth2/token')) return rep(200, { access_token: 'h', expires_in: 1800 });
     if (url.endsWith('/checkout-intents') && opts.method === 'post') {
@@ -109,6 +137,10 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
       computeDigest: (_a, texte) => [...crypto.createHash('sha256').update(texte).digest()],
       DigestAlgorithm: { SHA_256: 'SHA_256' },
       getUuid: () => crypto.randomUUID(),
+      Charset: { UTF_8: 'UTF-8' },
+      base64Encode: (x) => Buffer.from(x, 'utf8').toString('base64'),
+      base64Decode: (x) => [...Buffer.from(x, 'base64')],
+      newBlob: (octets) => ({ getDataAsString: () => Buffer.from(octets).toString('utf8') }),
     },
     UrlFetchApp: {
       fetch: (url, opts = {}) => {
@@ -116,6 +148,7 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
         const r = repondre(url, opts);
         return { getResponseCode: () => r.code, getContentText: () => r.corps };
       },
+      fetchAll: (demandes) => demandes.map(({ url, ...opts }) => ctx.UrlFetchApp.fetch(url, opts)),
     },
     GmailApp: { getAliases: () => ['secretariat@himmelsweg.fr'], sendEmail: (...a) => emails.push(a) },
     ContentService: {
@@ -141,7 +174,7 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
   for (const [k, v] of Object.entries(base)) ecrire(k, v);
   const lire = (chemin) => (docs.has(chemin) ? JSON.parse(JSON.stringify(s.depuisChamps(docs.get(chemin)))) : null);
   const appeler = (demande) => JSON.parse(s.doPost({ postData: { contents: JSON.stringify(demande) } }).texte);
-  return { ...s, appels, emails, intentions, envoisFcm, props, docs, ecrire, lire, appeler };
+  return { ...s, appels, emails, intentions, envoisFcm, props, docs, ecrire, lire, appeler, github, commits };
 }
 
 /** Base avec le questionnaire et les tarifs de départ. */
@@ -419,4 +452,48 @@ test('équipe repas : nombre par régime des inscrits confirmés, sans aucun nom
   assert.equal(stats.total, 4);
   assert.deepEqual(stats.parRegime, { Végétarien: 1, Aucun: 2, 'Non précisé': 1 });
   assert.ok(!JSON.stringify(stats).includes('Paul'));
+});
+
+const DEPOT = {
+  '.pages.yml': 'content:\n  - name: pages\n',
+  'site/src/content/pages/programme.md': '---\ntitle: Programme\n---\nTrois jours à pied. Été 2027.\n',
+  'site/src/content/site/menu.yml': 'type: menu\nliens: []\n',
+  'site/src/assets/photos/vignes.jpg': 'JPEG',
+  'site/src/pages/index.astro': 'code',
+};
+
+test('site : seuls les admins lisent et modifient les textes, sans écraser une version plus récente', () => {
+  const s = charger({ base: EQUIPE, sessions: SESSIONS, depot: DEPOT, proprietes: { GITHUB_CLE: 'cle-gh' } });
+  assert.match(s.appeler({ action: 'site', op: 'lire', idToken: 'jeton-pel1' }).erreur, /administrateurs/);
+  const lu = s.appeler({ action: 'site', op: 'lire', idToken: 'jeton-admin' });
+  assert.deepEqual(lu.fichiers.map((f) => f.chemin).sort(), ['site/src/content/pages/programme.md', 'site/src/content/site/menu.yml']);
+  assert.equal(lu.fichiers.find((f) => f.chemin.endsWith('programme.md')).contenu, DEPOT['site/src/content/pages/programme.md']);
+  assert.deepEqual(lu.photos, ['vignes.jpg']);
+  assert.match(lu.schema, /content:/);
+
+  const prog = lu.fichiers.find((f) => f.chemin.endsWith('programme.md'));
+  const r = s.appeler({ action: 'site', op: 'ecrire', idToken: 'jeton-admin', chemin: prog.chemin, sha: prog.sha, contenu: '---\ntitle: Programme\n---\nÉtapes à venir.\n' });
+  assert.ok(r.sha);
+  assert.equal(s.github.get(prog.chemin).contenu, '---\ntitle: Programme\n---\nÉtapes à venir.\n');
+  assert.equal(s.commits[0].branche, 'main');
+  assert.match(s.commits[0].message, /programme\.md.*directrice@gmail\.com/);
+  // Deuxième enregistrement avec l'ancienne version : refusé.
+  assert.match(s.appeler({ action: 'site', op: 'ecrire', idToken: 'jeton-admin', chemin: prog.chemin, sha: prog.sha, contenu: 'x' }).erreur, /modifié ailleurs/);
+  // Pas de fichier de code du site, pas de chemin détourné.
+  assert.ok(s.appeler({ action: 'site', op: 'ecrire', idToken: 'jeton-admin', chemin: 'site/src/pages/index.astro', contenu: 'x' }).erreur);
+  assert.ok(s.appeler({ action: 'site', op: 'ecrire', idToken: 'jeton-admin', chemin: 'site/src/content/pages/../../pages/a.md', contenu: 'x' }).erreur);
+  // Photo et nouvelle page, puis suppression de la page.
+  s.appeler({ action: 'site', op: 'photo', idToken: 'jeton-admin', chemin: 'site/src/assets/photos/messe-2027.jpg', base64: Buffer.from('IMG').toString('base64') });
+  assert.equal(s.github.get('site/src/assets/photos/messe-2027.jpg').contenu, 'IMG');
+  const nouvelle = s.appeler({ action: 'site', op: 'ecrire', idToken: 'jeton-admin', chemin: 'site/src/content/pages/chorale.md', contenu: '---\ntitle: Chorale\n---\n' });
+  s.appeler({ action: 'site', op: 'supprimer', idToken: 'jeton-admin', chemin: 'site/src/content/pages/chorale.md', sha: nouvelle.sha });
+  assert.ok(!s.github.has('site/src/content/pages/chorale.md'));
+  assert.ok(s.appeler({ action: 'site', op: 'supprimer', idToken: 'jeton-admin', chemin: 'site/src/content/site/menu.yml', sha: 'x' }).erreur);
+});
+
+test('site : message clair si la clé GitHub manque ou est refusée', () => {
+  const sans = charger({ base: EQUIPE, sessions: SESSIONS, depot: DEPOT });
+  assert.match(sans.appeler({ action: 'site', op: 'lire', idToken: 'jeton-admin' }).erreur, /GITHUB_CLE/);
+  const fausse = charger({ base: EQUIPE, sessions: SESSIONS, depot: DEPOT, proprietes: { GITHUB_CLE: 'perimee' } });
+  assert.match(fausse.appeler({ action: 'site', op: 'lire', idToken: 'jeton-admin' }).erreur, /clé GitHub est refusée/);
 });

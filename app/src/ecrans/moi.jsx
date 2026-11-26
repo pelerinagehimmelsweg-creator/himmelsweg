@@ -78,10 +78,15 @@ export function Moi({ donnees, session }) {
       {d.admin && (
         <section class="carte">
           <h2>Site internet</h2>
-          <p>Les textes et photos de himmelsweg.fr se modifient dans l’éditeur du site.</p>
-          <a class="bouton secondaire" href={LIENS.editeurSite} target="_blank" rel="noopener">
-            Ouvrir l’éditeur du site
-          </a>
+          <p>Les textes et photos de himmelsweg.fr se modifient ici, de préférence sur un ordinateur.</p>
+          <div class="actions">
+            <a class="bouton secondaire" href="#/admin/site">
+              Modifier le site
+            </a>
+            <a class="lien-bouton" href={LIENS.editeurSite} target="_blank" rel="noopener">
+              Ancien éditeur (Pages CMS)
+            </a>
+          </div>
         </section>
       )}
 
