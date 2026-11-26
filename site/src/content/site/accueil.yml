@@ -1,6 +1,6 @@
 type: accueil
 image_principale: ../../assets/photos/paysage-banniere.jpg
-surtitre: Pèlerinage en Alsace pour les hommes et les femmes
+surtitre: Pèlerinage en Alsace pour les hommes et les femmes !
 sous_titre: le Chemin du Ciel
 presentation_titre: Le pèlerinage Himmelsweg revient !
 presentation: >-
@@ -8,7 +8,8 @@ presentation: >-
 
 
   Himmelsweg s'adresse à toute personne (à partir de 15 ans) désireuse de Dieu.
-  Les femmes et les hommes marchent chacun de leur côté, sur les mêmes dates.
+  **Les femmes et les hommes marchent chacun de leur côté, sur les mêmes
+  dates.**
 
 
   Himmelsweg, c'est marcher dans la campagne alsacienne et prier ensemble pour
@@ -53,3 +54,4 @@ encart_texte: >-
 encart_photo: ../../assets/photos/vignes-automne.jpg
 aumonerie: L'aumônerie du pèlerinage Himmelsweg est confiée à la Paroisse
   personnelle La Croix glorieuse en Alsace.
+aumonerie_logo: ../../assets/photos/icon-192.png
