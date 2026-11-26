@@ -5,7 +5,7 @@ Dépôt du pèlerinage Himmelsweg.
 | Dossier | Contenu |
 |---|---|
 | `site/` | Le site public **himmelsweg.fr** |
-| `app/` | L'application **app.himmelsweg.fr** (à venir) |
+| `app/` | L'application **app.himmelsweg.fr** (en construction, voir [`app/README.md`](app/README.md)) |
 | `google/` | Le script Google qui reçoit les formulaires de contact |
 
 ## Modifier le site sans rien installer : Pages CMS
