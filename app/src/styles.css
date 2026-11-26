@@ -225,3 +225,19 @@ a.encart { text-decoration: none; }
 .fil li.vide { background: none; border: 0; }
 .ecrire { position: sticky; bottom: calc(4.2rem + var(--bas)); display: flex; gap: .5rem; align-items: flex-end; background: var(--creme); padding: .4rem 0; }
 .ecrire textarea { flex: 1; min-height: 44px; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 10px; background: var(--blanc); resize: vertical; }
+
+/* Organisation : hommes en bleu, femmes en rouge */
+.bloc-groupe h2 { display: flex; align-items: center; gap: .5rem; }
+.bloc-H { border-left: 5px solid #3d6a99; }
+.bloc-F { border-left: 5px solid var(--rouge); }
+.bandeau-groupe { margin: -.4rem 0 1rem; padding: .3rem .7rem; border-radius: 6px; font-weight: 700; font-size: .9rem; }
+.bandeau-groupe.bloc-H { background: #dfe8f3; color: #234a73; }
+.bandeau-groupe.bloc-F { background: #f6dfe0; color: var(--rouge-fonce); }
+h1 .pastille { display: inline-grid; vertical-align: middle; margin-right: .3rem; }
+.ajout-ligne { display: flex; gap: .5rem; margin: .4rem 0 .8rem; }
+.ajout-ligne input { flex: 1; min-width: 0; min-height: 44px; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+.choix-personne { width: 100%; min-height: 44px; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); margin: .3rem 0; }
+.orga-personne { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.orga-personne a, .bloc-groupe .lien-ligne { text-decoration: none; color: var(--encre); font-weight: 600; }
+.bloc-groupe .lien-ligne strong { color: var(--rouge-fonce); }
+.orga-personne small { display: block; color: var(--gris); font-size: .82rem; }

@@ -2,7 +2,7 @@
 // Il applique les mêmes droits que la vraie base, pour que la démo montre ce que voit chaque rôle.
 
 import { CHAPITRES, CONTENUS, PERSONAS, dossiersExemple, membresExemple } from './exemples.js';
-import { droits } from './modele.js';
+import { droits, sansRolesDeChapitre } from './modele.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
@@ -180,6 +180,19 @@ export function creerDemo() {
     },
 
     ecouterChapitres: (cb) => ecouter(() => (session() ? etat.chapitres : []), cb),
+    async enregistrerChapitre({ id, ...c }) {
+      exigerAdmin();
+      const cle = id || `ch-${Date.now().toString(36)}`;
+      etat.chapitres = [...etat.chapitres.filter((x) => x.id !== cle), { ...c, id: cle }];
+      sauver();
+      return cle;
+    },
+    async supprimerChapitre(id) {
+      exigerAdmin();
+      etat.membres = etat.membres.map((m) => (m.chapitre === id ? { ...m, chapitre: null, roles: sansRolesDeChapitre(m.roles) } : m));
+      etat.chapitres = etat.chapitres.filter((x) => x.id !== id);
+      sauver();
+    },
 
     // Questionnaire d'inscription (lisible par tous, même sans connexion)
     ecouterQuestions: (cb) => ecouter(() => etat.questions, cb),

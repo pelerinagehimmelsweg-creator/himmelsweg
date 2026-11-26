@@ -6,6 +6,7 @@ import { Connexion } from './ecrans/connexion.jsx';
 import { Contenus } from './ecrans/contenus.jsx';
 import { FicheMembre, ListeMembres } from './ecrans/membres.jsx';
 import { AdminInscriptions, AdminQuestionnaire } from './ecrans/admin.jsx';
+import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
 
@@ -68,6 +69,8 @@ export function App({ donnees }) {
     contenu =
       sous === 'questionnaire' ? (
         <AdminQuestionnaire donnees={donnees} />
+      ) : sous === 'organisation' ? (
+        <AdminOrganisation donnees={donnees} chapitreId={detail} />
       ) : sous === 'notification' ? (
         <EnvoiNotification donnees={donnees} />
       ) : (
