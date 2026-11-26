@@ -1,0 +1,93 @@
+---
+import Base from '../layouts/Base.astro';
+import { Image } from 'astro:assets';
+import banniere from '../assets/photos/paysage-banniere.jpg';
+import pelerines from '../assets/photos/pelerines-dos.jpg';
+import vignes from '../assets/photos/vignes-automne.jpg';
+import sarah from '../assets/photos/sarah.jpg';
+import abbe from '../assets/photos/abbe-molin.jpg';
+import misericorde from '../assets/photos/misericorde-divine.jpg';
+import logo from '../assets/logo-blason.png';
+import { pelerinage } from '../config';
+---
+<Base>
+  <section class="accueil-hero">
+    <Image src={banniere} alt="Deux pèlerines en costume alsacien et la bannière Himmelsweg face aux collines d'Alsace" widths={[800, 1400, 1800]} sizes="100vw" loading="eager" class="accueil-fond" />
+    <div class="accueil-contenu">
+      <Image src={logo} alt="" width={140} height={140} loading="eager" class="accueil-logo" />
+      <p class="accueil-sur">Pèlerinage en Alsace</p>
+      <h1>Himmelsweg<br /><span>le Chemin du Ciel</span></h1>
+      <p class="accueil-dates">{pelerinage.dates}</p>
+      <div class="boutons">
+        <a class="bouton" href="/inscription/">S'inscrire</a>
+        <a class="bouton bouton-clair" href="/le-pelerinage/">Découvrir le pèlerinage</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-blanche">
+    <div class="conteneur deux-colonnes">
+      <div>
+        <p class="surtitre">{pelerinage.dates}</p>
+        <h2>Le pèlerinage Himmelsweg revient !</h2>
+        <p>Vous êtes invités à participer à la {pelerinage.edition} édition {pelerinage.datesLongues}.</p>
+        <p>Himmelsweg s'adresse à toute personne (à partir de 15 ans) désireuse de Dieu. Les femmes et les hommes marchent chacun de leur côté, sur les mêmes dates.</p>
+        <p>Himmelsweg, c'est marcher dans la campagne alsacienne et prier ensemble pour l'Église, notre diocèse, nos paroisses et nos intentions personnelles.</p>
+        <p>Himmelsweg, c'est aussi chanter et partager un temps de fraternité avec d'autres pèlerins vivant en Alsace.</p>
+        <p>Le pèlerinage Himmelsweg se veut missionnaire ! N'hésitez pas à le proposer à vos amis et collègues qui ne connaîtraient pas encore Jésus.</p>
+        <p><strong>En route sur le chemin du Ciel !</strong></p>
+      </div>
+      <Image src={pelerines} alt="Pèlerines en costume traditionnel alsacien" widths={[500, 900]} sizes="(max-width: 800px) 100vw, 50vw" class="photo" />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="conteneur">
+      <h2 class="centre">Ils en parlent</h2>
+      <div class="deux-colonnes" style="align-items:stretch">
+        <figure class="carte temoin">
+          <blockquote>« Le pèlerinage Himmelsweg a répondu à mes attentes : vivre quelques jours à l'écart pour prier et contempler les magnifiques paysages d'Alsace, marcher entre femmes de tous horizons et de tous âges dans une ambiance conviviale ! »</blockquote>
+          <figcaption><Image src={sarah} alt="" width={64} height={64} /><span><strong>Sarah</strong><small>Présidente</small></span></figcaption>
+        </figure>
+        <figure class="carte temoin">
+          <blockquote>« Himmelsweg rappelle que la foi peut se vivre dans la marche, dans le silence, dans le chant, mais surtout dans la communion. Je souhaite à chaque participant de découvrir, au long de ce chemin, la paix profonde et la lumière que le Christ veut déposer en chacun. »</blockquote>
+          <figcaption><Image src={abbe} alt="" width={64} height={64} /><span><strong>Abbé Molin</strong><small>Curé</small></span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-rouge">
+    <div class="conteneur deux-colonnes">
+      <div>
+        <h2>Trois jours de marche et de prière</h2>
+        <p>Une route sans difficulté particulière à travers vignes et villages, une logistique qui transporte vos affaires jusqu'au bivouac, et une messe de clôture avec les familles.</p>
+        <div class="boutons">
+          <a class="bouton bouton-clair" href="/programme/">Le programme</a>
+          <a class="bouton bouton-clair" href="/informations-pratiques/">Informations pratiques</a>
+        </div>
+      </div>
+      <Image src={vignes} alt="Pèlerine marchant dans les vignes en automne" widths={[500, 900]} sizes="(max-width: 800px) 100vw, 50vw" class="photo" />
+    </div>
+  </section>
+
+  <section class="section section-blanche">
+    <div class="etroit centre">
+      <Image src={misericorde} alt="Logo des missionnaires de la Miséricorde divine" width={120} height={120} style="margin:0 auto 1rem" />
+      <p>L'aumônerie du pèlerinage Himmelsweg est confiée aux <strong>missionnaires de la Miséricorde divine</strong>.</p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .accueil-hero { position: relative; min-height: min(88vh, 760px); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--blanc); padding: 3rem 1rem; overflow: hidden; }
+  .accueil-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(35,28,24,.35), rgba(35,28,24,.55)); }
+  :global(.accueil-fond) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; }
+  .accueil-contenu { position: relative; z-index: 1; max-width: 760px; display: flex; flex-direction: column; align-items: center; }
+  :global(.accueil-logo) { width: 120px; height: 120px; filter: drop-shadow(0 4px 14px rgba(0,0,0,.35)); margin-bottom: 1rem; }
+  .accueil-sur { font-family: var(--titre); letter-spacing: .2em; text-transform: uppercase; font-size: .95rem; margin: 0 0 .4rem; }
+  h1 { color: var(--blanc); font-size: clamp(2.4rem, 7vw, 4.5rem); letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 2px 16px rgba(0,0,0,.4); margin-bottom: .3em; }
+  h1 span { display: block; font-size: .42em; letter-spacing: .12em; font-weight: 500; }
+  .accueil-dates { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 700; background: var(--rouge); padding: .3rem 1.2rem; border-radius: 999px; }
+  .accueil-contenu .boutons { justify-content: center; }
+</style>

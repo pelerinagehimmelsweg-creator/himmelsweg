@@ -1,0 +1,10 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+interface Props { titre: string; image: ImageMetadata; position?: string }
+const { titre, image, position = 'center' } = Astro.props;
+---
+<section class="titre-page">
+  <Image src={image} alt="" widths={[800, 1400, 1800]} sizes="100vw" loading="eager" style={`object-position:${position}`} />
+  <div class="conteneur"><h1>{titre}</h1></div>
+</section>

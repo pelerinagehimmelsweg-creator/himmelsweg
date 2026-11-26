@@ -1,0 +1,29 @@
+---
+import Base from '../layouts/Base.astro';
+import { Image } from 'astro:assets';
+import odile from '../assets/photos/sainte-odile.jpg';
+---
+<Base titre="Sainte Odile" description="Sainte Odile, patronne de l'Alsace, dont les reliques ont accompagné le pèlerinage Himmelsweg 2026.">
+  <section class="section section-blanche">
+    <div class="conteneur odile">
+      <Image src={odile} alt="Icône de sainte Odile tenant un livre et une crosse" widths={[400, 640]} sizes="(max-width: 800px) 80vw, 360px" class="photo" loading="eager" />
+      <div>
+        <p class="surtitre">Patronne de l'Alsace</p>
+        <h1>Sainte Odile</h1>
+        <p class="carte"><strong>En 2026, les reliques de sainte Odile ont été présentes pendant tout le pèlerinage Himmelsweg.</strong></p>
+        <p>Odile de Hohenbourg, ou sainte Odile, née vers 662 à Obernai (Bas-Rhin), morte vers 720 à Hohenbourg, est une dame de l'époque mérovingienne, fille du duc Etichon-Adalric d'Alsace, fondatrice et abbesse du monastère de Hohenbourg, sur l'actuel mont Sainte-Odile.</p>
+        <p>Elle a été canonisée au XI<sup>e</sup> siècle et est considérée comme la sainte patronne de l'Alsace.</p>
+        <p>Selon le texte de la Vie de sainte Odile, l'enfant n'a alors pas encore reçu le baptême. Or, c'est le moment où le moine irlandais Erhard, évêque d'Ardagh (comté de Longford), parcourant la Bavière, a une vision dans laquelle Dieu lui ordonne de se rendre à Baume afin de procéder à ce baptême.</p>
+        <p>Ce qu'il fait quelques jours plus tard : au moment où l'huile sainte touche les yeux de l'enfant, celle-ci retrouve la vue. C'est à ce moment qu'elle reçoit le nom d'Odile, qui signifie « fille de la lumière ».</p>
+        <p>Le miracle fait grand bruit, mais ne suffit pas à apaiser Adalric. Loin de se réjouir lorsqu'Odile revient le voir, accompagnée de son frère Hugues, il se met dans une telle fureur qu'il tue ce dernier.</p>
+        <p>Plus tard, il se repent et donne à Odile son château de Hohenbourg, qu'elle transforme en monastère, l'abbaye de Hohenbourg. Les bâtiments étant construits sur une montagne, beaucoup de fidèles, notamment les malades, ont du mal à y accéder.</p>
+        <p>Aussi Odile fait-elle construire pour eux un second établissement appelé Niedermünster, c'est-à-dire le « monastère d'en bas ».</p>
+      </div>
+    </div>
+  </section>
+</Base>
+<style>
+  .odile { display: grid; grid-template-columns: 360px 1fr; gap: 3rem; align-items: start; }
+  .odile :global(img) { position: sticky; top: 110px; }
+  @media (max-width: 800px) { .odile { grid-template-columns: 1fr; } .odile :global(img) { position: static; max-width: 320px; margin: 0 auto; } }
+</style>

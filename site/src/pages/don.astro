@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+import WidgetHelloAsso from '../components/WidgetHelloAsso.astro';
+import { helloasso } from '../config';
+---
+<Base titre="Faire un don" description="Soutenir le pèlerinage Himmelsweg par un don.">
+  <section class="section">
+    <div class="conteneur">
+      <div class="etroit centre">
+        <h1>Faire un don</h1>
+        <p>Votre don permet au pèlerinage d'accueillir chacun dans de bonnes conditions. Merci de votre générosité !</p>
+      </div>
+      <WidgetHelloAsso url={helloasso.don} titre="Faire un don à Himmelsweg" hauteur={850} />
+    </div>
+  </section>
+</Base>

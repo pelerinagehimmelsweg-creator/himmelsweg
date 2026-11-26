@@ -1,0 +1,63 @@
+---
+import Base from '../layouts/Base.astro';
+import TitrePage from '../components/TitrePage.astro';
+import vignes from '../assets/photos/vignes-marche.jpg';
+import { contact } from '../config';
+---
+<Base titre="Informations pratiques" description="Inscription, bivouac, repas, sacs : tout ce qu'il faut savoir avant de partir sur le pèlerinage Himmelsweg.">
+  <TitrePage titre="Informations pratiques" image={vignes} position="center 60%" />
+
+  <section class="section">
+    <div class="etroit faq">
+      <details open>
+        <summary>Peut-on s'inscrire sur place ?</summary>
+        <div class="reponse"><p>Non, l'inscription se fait uniquement en ligne et le nombre de places est limité. <a href="/inscription/">S'inscrire</a></p></div>
+      </details>
+      <details>
+        <summary>Peut-on inscrire un ou une mineur(e) ?</summary>
+        <div class="reponse"><p>Oui, un ou une jeune peut participer au pèlerinage en étant sous la responsabilité d'un adulte présent tout au long du pèlerinage. Pour un jeune de moins de 15 ans, contactez le secrétariat : <a href={`mailto:${contact.email}`}>{contact.email}</a>.</p></div>
+      </details>
+      <details>
+        <summary>Que faut-il apporter pour le bivouac ?</summary>
+        <div class="reponse"><ul>
+          <li>1 lampe de poche</li>
+          <li>1 sac de couchage et un tapis de sol</li>
+          <li>1 tente</li>
+          <li>Affaires de nuit et de toilette</li>
+          <li>Chaussures légères</li>
+          <li>Vêtements de rechange</li>
+          <li>Gamelle et couverts pour le dîner</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Que faut-il prévoir dans son sac de la journée ?</summary>
+        <div class="reponse"><ul>
+          <li>1 pique-nique pour le déjeuner</li>
+          <li>1 gourde et 1 quart</li>
+          <li>1 vêtement de pluie</li>
+          <li>1 couvre-chef</li>
+        </ul></div>
+      </details>
+      <details>
+        <summary>Y a-t-il des tentes collectives pour le couchage ?</summary>
+        <div class="reponse"><p>Non, le pèlerinage ne prévoit pas de tentes collectives. Chaque pèlerin prévoit sa tente individuelle, son matelas, son oreiller, etc.</p></div>
+      </details>
+      <details>
+        <summary>Et les sanitaires ?</summary>
+        <div class="reponse"><p>Il y a bien sûr des douches et des toilettes aux bivouacs.</p></div>
+      </details>
+      <details>
+        <summary>Doit-on porter son sac ?</summary>
+        <div class="reponse"><p>Le pèlerinage se charge de transporter les gros sacs contenant les affaires de nuit directement sur le lieu de bivouac. Chaque pèlerin ne porte que son petit sac à dos de la journée.</p></div>
+      </details>
+      <details>
+        <summary>Comment se passent les repas ?</summary>
+        <div class="reponse"><p>Le pèlerinage fournit le petit-déjeuner du samedi et du dimanche, et le dîner du vendredi et du samedi. Chaque pèlerin apporte un pique-nique pour le déjeuner du vendredi et du samedi.</p></div>
+      </details>
+      <details>
+        <summary>Quelle tenue prévoir ?</summary>
+        <div class="reponse"><p>Le pèlerin de Himmelsweg prendra soin de sa tenue de pèlerinage et n'oubliera ni son k-way ni son couvre-chef.</p></div>
+      </details>
+    </div>
+  </section>
+</Base>

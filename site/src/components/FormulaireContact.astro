@@ -1,0 +1,67 @@
+---
+import { contact } from '../config';
+interface Props { sujet: string; choixAide?: boolean }
+const { sujet, choixAide = false } = Astro.props;
+const aides = ['Aide financière', 'Aide en nature', 'Aide logistique'];
+---
+<form class="formulaire" data-endpoint={contact.formulaireGoogle} data-email={contact.email} data-sujet={sujet}>
+  <input type="hidden" name="sujet" value={sujet} />
+  <div class="cache" aria-hidden="true">
+    <label>Ne pas remplir <input type="text" name="site_web" tabindex="-1" autocomplete="off" /></label>
+  </div>
+  {choixAide && (
+    <fieldset>
+      <legend><strong>Type d'aide proposée</strong></legend>
+      {aides.map((a) => (
+        <label class="choix"><input type="checkbox" name="aide" value={a} /> {a}</label>
+      ))}
+    </fieldset>
+  )}
+  <div>
+    <label for={`nom-${sujet}`}>Nom</label>
+    <input id={`nom-${sujet}`} name="nom" type="text" autocomplete="name" />
+  </div>
+  <div>
+    <label for={`email-${sujet}`}>E-mail *</label>
+    <input id={`email-${sujet}`} name="email" type="email" required autocomplete="email" />
+  </div>
+  <div>
+    <label for={`message-${sujet}`}>Message *</label>
+    <textarea id={`message-${sujet}`} name="message" rows="6" required></textarea>
+  </div>
+  <div><button class="bouton" type="submit">Envoyer</button></div>
+  <p class="message-form" role="status"></p>
+</form>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('form[data-sujet]').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statut = form.querySelector<HTMLElement>('.message-form')!;
+      const bouton = form.querySelector<HTMLButtonElement>('button')!;
+      const donnees = new FormData(form);
+      if (donnees.get('site_web')) return;
+      const endpoint = form.dataset.endpoint;
+      const aides = donnees.getAll('aide').join(', ');
+      if (!endpoint) {
+        // Pas encore de script Google : on ouvre la messagerie du visiteur.
+        const corps = `${donnees.get('message')}\n\n${aides ? 'Aide proposée : ' + aides + '\n' : ''}${donnees.get('nom') || ''}\n${donnees.get('email')}`;
+        location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent('Site Himmelsweg – ' + form.dataset.sujet)}&body=${encodeURIComponent(corps)}`;
+        return;
+      }
+      bouton.disabled = true;
+      statut.className = 'message-form';
+      try {
+        await fetch(endpoint, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(donnees as any) });
+        form.reset();
+        statut.textContent = 'Merci ! Votre message a bien été envoyé, nous vous répondrons rapidement.';
+        statut.className = 'message-form ok';
+      } catch {
+        statut.textContent = `L'envoi a échoué. Vous pouvez nous écrire directement à ${form.dataset.email}.`;
+        statut.className = 'message-form erreur';
+      } finally {
+        bouton.disabled = false;
+      }
+    });
+  });
+</script>

@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import FormulaireContact from '../components/FormulaireContact.astro';
+---
+<Base titre="Entreprises" description="Entreprises alsaciennes : soutenez le pèlerinage Himmelsweg.">
+  <section class="section">
+    <div class="conteneur deux-colonnes" style="align-items:start">
+      <div>
+        <p class="surtitre">Mécénat</p>
+        <h1>Entreprises alsaciennes</h1>
+        <p>Vous êtes sensible à notre projet ? Vous pouvez aider Himmelsweg !</p>
+        <ul class="aides">
+          <li><strong>Aide financière</strong> (sponsoring classique)</li>
+          <li><strong>Aide en nature</strong> (produits, repas, prêt de matériel, réduction sur facture)</li>
+          <li><strong>Aide logistique</strong> (transport, impression, communication)</li>
+        </ul>
+      </div>
+      <div class="carte"><FormulaireContact sujet="Entreprises" choixAide /></div>
+    </div>
+  </section>
+</Base>
+<style>
+  .aides { padding-left: 1.2rem; }
+  .aides li { margin-bottom: .6rem; }
+</style>

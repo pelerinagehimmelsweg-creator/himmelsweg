@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import TitrePage from '../components/TitrePage.astro';
+import chateau from '../assets/photos/paysage-chateau.jpg';
+import { pelerinage } from '../config';
+
+// Étapes : à mettre à jour quand le parcours 2027 sera fixé.
+const etapes = [
+  { jour: 'Vendredi', date: '7 mai', titre: 'Scherwiller – Ribeauvillé', detail: 'Environ 22 km' },
+  { jour: 'Samedi', date: '8 mai', titre: 'Ribeauvillé – Turckheim', detail: 'Environ 18 km' },
+  { jour: 'Dimanche', date: '9 mai', titre: 'Turckheim – Colmar', detail: 'Environ 6 km. Grand-messe à Saint-Joseph, puis déjeuner de clôture avec les familles.' },
+];
+---
+<Base titre="Programme" description={`Le programme des trois jours de marche du pèlerinage Himmelsweg, ${pelerinage.dates}.`}>
+  <TitrePage titre="Programme" image={chateau} />
+
+  <section class="section">
+    <div class="etroit">
+      <p class="surtitre">Himmelsweg {pelerinage.annee}</p>
+      <h2>Trois jours sur le chemin du Ciel</h2>
+      <p><em>Parcours donné à titre indicatif d'après l'édition 2026, il sera confirmé prochainement.</em></p>
+      <ol class="etapes">
+        {etapes.map((e) => (
+          <li class="etape">
+            <div class="etape-jour">{e.jour}<span>{e.date.split(' ')[0]}</span>{e.date.split(' ')[1]}</div>
+            <div><h3>{e.titre}</h3><p>{e.detail}</p></div>
+          </li>
+        ))}
+      </ol>
+      <div class="carte" style="margin-top:2rem">
+        <p style="margin:0">La route ne pose pas de difficulté particulière. Un service logistique est présent tout au long du pèlerinage pour guider les pèlerins, fournir de l'eau…</p>
+      </div>
+    </div>
+  </section>
+</Base>
