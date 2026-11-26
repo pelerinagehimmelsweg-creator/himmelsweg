@@ -1,0 +1,114 @@
+/* Mêmes couleurs et polices que le site himmelsweg.fr */
+:root {
+  --rouge: #b32d24;
+  --rouge-fonce: #8a1f18;
+  --creme: #f6f1e4;
+  --creme-fonce: #ede6d2;
+  --encre: #231c18;
+  --gris: #5d544d;
+  --blanc: #fffdf8;
+  --vert: #2f6b3a;
+  --titre: 'Cinzel', Georgia, serif;
+  --texte: 'Source Sans 3 Variable', 'Segoe UI', system-ui, sans-serif;
+  --rayon: 12px;
+  --bas: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: var(--texte); font-size: 1.0625rem; line-height: 1.55; color: var(--encre); background: var(--creme); }
+a { color: var(--rouge); }
+h1, h2 { font-family: var(--titre); color: var(--rouge-fonce); line-height: 1.2; margin: 0 0 .5em; }
+h1 { font-size: 1.55rem; }
+h2 { font-size: 1.1rem; }
+p { margin: 0 0 .8em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.chargement { display: grid; place-items: center; min-height: 100vh; color: var(--gris); }
+
+.coque { min-height: 100vh; display: flex; flex-direction: column; }
+.entete { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 1rem; padding-top: max(.5rem, env(safe-area-inset-top)); background: var(--blanc); border-bottom: 1px solid var(--creme-fonce); }
+.marque { display: flex; align-items: center; gap: .6rem; text-decoration: none; color: var(--encre); }
+.marque-nom { display: block; font-family: var(--titre); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--rouge); font-size: 1.1rem; line-height: 1.1; }
+.marque-sous { display: block; font-size: .8rem; color: var(--gris); }
+.badge-demo { background: #f3d77a; color: #4a3a00; font-weight: 700; font-size: .8rem; padding: .15rem .55rem; border-radius: 99px; }
+.hors-ligne { background: var(--encre); color: var(--creme); font-size: .9rem; padding: .5rem 1rem; text-align: center; }
+
+.page { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem calc(5.5rem + var(--bas)); }
+
+.onglets { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: center; background: var(--blanc); border-top: 1px solid var(--creme-fonce); padding-bottom: var(--bas); }
+.onglets a { flex: 1; max-width: 140px; display: flex; flex-direction: column; align-items: center; gap: .1rem; padding: .5rem .25rem .45rem; text-decoration: none; color: var(--gris); font-size: .78rem; font-weight: 600; }
+.onglets a[aria-current='page'] { color: var(--rouge); }
+
+.carte { background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: var(--rayon); padding: 1rem 1.1rem; margin-bottom: 1rem; }
+.carte-titre { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.carte.sensible { border-left: 4px solid var(--rouge); }
+.texte ul { margin: 0 0 .8em; padding-left: 1.2em; }
+.texte li { margin: .15em 0; }
+.texte p:last-child, .texte ul:last-child { margin-bottom: 0; }
+.discret { color: var(--gris); font-size: .95rem; }
+.alerte { background: #fbe3df; color: var(--rouge-fonce); padding: .6rem .8rem; border-radius: 8px; }
+.info { background: #e3f1e4; color: var(--vert); padding: .5rem .8rem; border-radius: 8px; }
+
+.bouton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .55rem 1.1rem; border-radius: 99px; border: 2px solid var(--rouge); background: var(--rouge); color: var(--blanc); font-weight: 700; text-decoration: none; cursor: pointer; }
+.bouton.secondaire { background: transparent; color: var(--rouge); }
+.bouton.petit { min-height: 36px; padding: .3rem .9rem; font-size: .9rem; }
+.bouton.urgence { width: 100%; margin-bottom: 1rem; font-size: 1.1rem; }
+.lien-bouton { background: none; border: 0; padding: .4rem 0; color: var(--rouge); text-decoration: underline; cursor: pointer; font-size: .95rem; }
+.danger { color: var(--rouge-fonce); }
+.actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .5rem; }
+.encart { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem; width: 100%; text-align: left; background: #fdf3d6; border: 1px solid #ecd9a0; color: var(--encre); border-radius: 10px; padding: .6rem .8rem; margin-bottom: 1rem; font-weight: 600; cursor: default; }
+button.encart { cursor: pointer; }
+.retour { display: inline-block; margin-bottom: .6rem; text-decoration: none; font-weight: 600; }
+
+/* Connexion */
+.connexion { max-width: 460px; margin: 0 auto; padding: 2.5rem 1rem 3rem; text-align: center; }
+.connexion img { margin: 0 auto .5rem; }
+.connexion h1 { font-size: 2rem; letter-spacing: .08em; text-transform: uppercase; color: var(--rouge); }
+.connexion .carte { text-align: left; }
+.intro { color: var(--gris); margin-bottom: 1.5rem; }
+.personas { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.personas button { width: 100%; text-align: left; background: var(--creme); border: 1px solid var(--creme-fonce); border-radius: 10px; padding: .6rem .8rem; cursor: pointer; }
+.personas button:hover { border-color: var(--rouge); }
+.personas strong { display: block; }
+.personas span { font-size: .9rem; color: var(--gris); }
+
+/* Pèlerins */
+.chiffres { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-bottom: 1rem; }
+.chiffres div { background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: 10px; padding: .5rem; text-align: center; }
+.chiffres strong { display: block; font-size: 1.5rem; color: var(--rouge-fonce); line-height: 1.1; }
+.chiffres span { font-size: .85rem; color: var(--gris); }
+.filtres { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .8rem; }
+.filtres input { grid-column: 1 / -1; }
+.filtres input, .filtres select, .formulaire input, .formulaire select, .formulaire textarea, .fiche select { width: 100%; min-height: 44px; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+.liste-membres { list-style: none; margin: 0 0 1rem; padding: 0; background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: var(--rayon); overflow: hidden; }
+.liste-membres li + li { border-top: 1px solid var(--creme-fonce); }
+.liste-membres a { display: flex; align-items: center; gap: .7rem; padding: .6rem .9rem; text-decoration: none; color: var(--encre); }
+.lm-nom { flex: 1; min-width: 0; font-weight: 600; }
+.lm-nom small { display: block; font-weight: 400; color: var(--gris); font-size: .85rem; }
+.pastille { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
+.groupe-H { background: #dfe8f3; color: #234a73; }
+.groupe-F { background: #f6dfe0; color: var(--rouge-fonce); }
+.etiquette { flex: none; font-size: .75rem; font-weight: 700; background: #fdf3d6; color: #7a5a00; padding: .1rem .5rem; border-radius: 99px; }
+.fiche { display: grid; grid-template-columns: minmax(8rem, 35%) 1fr; gap: .45rem 1rem; margin: 0; }
+.fiche dt { color: var(--gris); }
+.fiche dd { margin: 0; overflow-wrap: anywhere; }
+.cases { display: grid; gap: .4rem; }
+.cases label, .case { display: flex; align-items: center; gap: .6rem; min-height: 40px; }
+.cases input, .case input { width: 22px; height: 22px; accent-color: var(--rouge); flex: none; }
+.lien-perso { display: flex; gap: .5rem; }
+.lien-perso input { flex: 1; min-width: 0; min-height: 36px; padding: .3rem .6rem; border: 1px solid #cfc5ad; border-radius: 8px; font-size: .85rem; }
+
+/* Formulaires */
+.formulaire label { display: block; font-weight: 600; margin-bottom: .8rem; }
+.formulaire label input, .formulaire label select, .formulaire label textarea { margin-top: .25rem; font-weight: 400; }
+.formulaire .case { font-weight: 400; }
+.formulaire fieldset { border: 1px solid var(--creme-fonce); border-radius: var(--rayon); padding: .8rem 1rem; margin: 0 0 1rem; background: var(--blanc); }
+.formulaire legend { font-weight: 700; color: var(--rouge-fonce); padding: 0 .3rem; }
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: 0 .8rem; }
+.aide { font-size: .88rem; color: var(--gris); margin-top: -.4rem; }
+
+@media (max-width: 420px) {
+  .deux { grid-template-columns: 1fr; }
+  .fiche { grid-template-columns: 1fr; gap: .1rem; }
+  .fiche dd { margin-bottom: .5rem; }
+}

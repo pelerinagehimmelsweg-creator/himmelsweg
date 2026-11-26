@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// Règles de sécurité de la base Himmelsweg.
+// C'est ICI que se joue la protection des données (RGPD) : même si quelqu'un
+// bricole l'app, la base refuse de lui envoyer ce qu'il n'a pas le droit de voir.
+//
+// Qui est qui :
+//  - admin : connecté avec Google, adresse inscrite dans la collection « admins »
+//            (un document par adresse, ex. admins/directrice@gmail.com) ;
+//  - participant : connecté par son lien personnel, son identifiant = celui de sa fiche membres/{id}.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function connecte() { return request.auth != null; }
+
+    function estAdmin() {
+      return connecte()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    }
+
+    function moi() { return get(/databases/$(database)/documents/membres/$(request.auth.uid)).data; }
+    function jeSuisMembre() { return connecte() && exists(/databases/$(database)/documents/membres/$(request.auth.uid)); }
+    function aRole(r) { return jeSuisMembre() && moi().roles.hasAny([r]); }
+    function monChapitre() { return moi().get('chapitre', null); }
+    function memeChapitre(ch) { return ch != null && monChapitre() == ch; }
+
+    // Liste des admins : chacun ne peut vérifier que sa propre adresse.
+    match /admins/{email} {
+      allow get: if connecte() && request.auth.token.email.lower() == email;
+      allow list, write: if false; // géré dans la console Firebase
+    }
+
+    // Contenus avant / pendant / après : lus par tous les connectés, écrits par les admins.
+    match /contenus/{id} {
+      allow read: if estAdmin() || jeSuisMembre();
+      allow write: if estAdmin();
+    }
+
+    match /chapitres/{id} {
+      allow read: if estAdmin() || jeSuisMembre();
+      allow write: if estAdmin();
+    }
+
+    // Fiches des pèlerins (nom, téléphone, chapitre, rôles).
+    match /membres/{id} {
+      allow read: if estAdmin()
+        || (connecte() && request.auth.uid == id)
+        || aRole('logistique')
+        || ((aRole('chef') || aRole('securite')) && memeChapitre(resource.data.get('chapitre', null)));
+      allow write: if estAdmin();
+
+      // Données sensibles : santé, contact d'urgence, régime, référent des mineurs.
+      match /prive/{doc} {
+        allow read: if estAdmin()
+          || (connecte() && request.auth.uid == id)
+          || aRole('logistique')
+          || (aRole('securite') && memeChapitre(get(/databases/$(database)/documents/membres/$(id)).data.get('chapitre', null)));
+        allow write: if estAdmin();
+      }
+
+      // Clé du lien personnel : admins seulement.
+      match /admin/{doc} {
+        allow read, write: if estAdmin();
+      }
+    }
+
+    // Clés secrètes des liens personnels : jamais lisibles depuis un téléphone.
+    // Seul le script Google (compte de service) les vérifie.
+    match /liens/{cle} {
+      allow create, delete: if estAdmin();
+      allow read, update: if false;
+    }
+
+    match /{autre=**} {
+      allow read, write: if false;
+    }
+  }
+}
