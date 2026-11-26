@@ -3,13 +3,15 @@
  *
  * Ce script tourne sur le compte Google du pèlerinage. Pour chaque message :
  *  1. il ajoute une ligne dans la feuille Google « Messages du site » (dans Drive) ;
- *  2. il envoie un e-mail depuis ce Gmail vers l'adresse DESTINATAIRE,
- *     avec « Répondre à » réglé sur l'adresse du visiteur.
+ *  2. il envoie un e-mail depuis ce Gmail, au nom de secretariat@himmelsweg.fr
+ *     (adresse déjà configurée dans Gmail, « Envoyer des e-mails en tant que »),
+ *     vers l'adresse DESTINATAIRE, avec « Répondre à » réglé sur le visiteur.
  *
  * Installation : voir google/README.md.
  */
 
 const DESTINATAIRE = 'secretariat@himmelsweg.fr';
+const EXPEDITEUR = 'secretariat@himmelsweg.fr';
 const NOM_FEUILLE = 'Messages du site';
 
 function doPost(e) {
@@ -33,12 +35,12 @@ function doPost(e) {
     aides ? `Aide proposée : ${aides}` : '',
     '',
     message,
-  ].filter((l) => l !== null).join('\n');
+  ].join('\n');
 
-  GmailApp.sendEmail(DESTINATAIRE, `Site Himmelsweg – ${sujet} – ${nom || email}`, corps, {
-    replyTo: email,
-    name: 'Site Himmelsweg',
-  });
+  const options = { replyTo: email, name: 'Site Himmelsweg' };
+  // Envoie au nom de secretariat@ si cet alias est bien configuré dans Gmail.
+  if (GmailApp.getAliases().indexOf(EXPEDITEUR) !== -1) options.from = EXPEDITEUR;
+  GmailApp.sendEmail(DESTINATAIRE, `Site Himmelsweg – ${sujet} – ${nom || email}`, corps, options);
   return reponse_('ok');
 }
 

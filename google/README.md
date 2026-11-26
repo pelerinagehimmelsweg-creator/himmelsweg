@@ -2,7 +2,8 @@
 
 Les formulaires Contact et Entreprises envoient leurs messages à un petit script Google
 qui tourne sur le compte **pelerinagehimmelsweg@gmail.com**. Il enregistre chaque message
-dans une feuille Google (dans le Drive) et envoie un e-mail depuis ce Gmail.
+dans une feuille Google (dans le Drive) et envoie un e-mail depuis ce Gmail, au nom de
+**secretariat@himmelsweg.fr** (l'adresse configurée dans Gmail sous « Envoyer des e-mails en tant que »).
 
 ## Installation (une seule fois, environ 5 minutes)
 
