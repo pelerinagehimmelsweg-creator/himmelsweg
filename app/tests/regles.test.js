@@ -27,6 +27,13 @@ before(async () => {
     await setDoc(doc(db, 'membres/pelA/admin/lien'), { cle: 'abc' });
     await setDoc(doc(db, 'liens/abc'), { membreId: 'pelA' });
     await setDoc(doc(db, 'contenus/c1'), { titre: 'Liste' });
+    await setDoc(doc(db, 'equipes/repas'), { extras: 3 });
+    await setDoc(doc(db, 'stats/repas'), { total: 6 });
+    await setDoc(doc(db, 'parcours/e1'), { titre: 'Départ' });
+    await setDoc(doc(db, 'prevoyance/p1'), { objet: 'Tentes' });
+    await setDoc(doc(db, 'fils/logistique/messages/m1'), { auteur: 'logi', texte: 'Bonjour' });
+    await setDoc(doc(db, 'alertes/a1'), { auteur: 'secuA', traitee: false });
+    await setDoc(doc(db, 'config/app'), { smsAlerte: '06' });
     await setDoc(doc(db, 'questions/regime'), { libelle: 'Régime', type: 'choix' });
     await setDoc(doc(db, 'config/inscription'), { ouverte: true, tarifs: [] });
     await setDoc(doc(db, 'dossiers/d1'), { statut: 'en_attente', membres: ['pelA'], payeur: { email: 'x@y.fr' } });
@@ -136,4 +143,60 @@ test('un pèlerin corrige ses réponses, mais pas son paiement ni la fiche des a
   await assertFails(setDoc(doc(db, 'membres/pelB'), { tel: '07' }, { merge: true }));
   await assertFails(setDoc(doc(db, 'membres/pelB/prive/fiche'), { sante: 'x' }));
   await assertFails(setDoc(doc(db, 'membres/pelA/admin/lien'), { cle: 'x' }));
+});
+
+test('repas : l’équipe repas voit les quantités et le nombre par régime, pas les autres', async () => {
+  await assertSucceeds(getDoc(doc(membre('repas'), 'equipes/repas')));
+  await assertSucceeds(setDoc(doc(membre('repas'), 'equipes/repas'), { extras: 5 }));
+  await assertSucceeds(getDoc(doc(membre('repas'), 'stats/repas')));
+  await assertSucceeds(setDoc(doc(membre('repas'), 'fournisseurs/f1'), { nom: 'Boulangerie' }));
+  await assertFails(setDoc(doc(membre('repas'), 'stats/repas'), { total: 1 }));
+  await assertFails(getDoc(doc(membre('pelA'), 'equipes/repas')));
+  await assertFails(getDoc(doc(membre('pelA'), 'stats/repas')));
+});
+
+test('logistique : parcours et prévoyance ; les chefs lisent le parcours sans le modifier', async () => {
+  await assertSucceeds(setDoc(doc(membre('logi'), 'parcours/e2'), { titre: 'Arrivée' }));
+  await assertSucceeds(setDoc(doc(membre('logi'), 'prevoyance/p2'), { objet: 'Trousses' }));
+  await assertSucceeds(getDoc(doc(membre('chefA'), 'parcours/e1')));
+  await assertFails(setDoc(doc(membre('chefA'), 'parcours/e1'), { titre: 'x' }));
+  await assertFails(getDoc(doc(membre('chefA'), 'prevoyance/p1')));
+  await assertFails(getDoc(doc(membre('pelA'), 'parcours/e1')));
+});
+
+test('discussions : chacun son équipe, messages signés', async () => {
+  await assertSucceeds(getDocs(collection(membre('logi'), 'fils/logistique/messages')));
+  await assertSucceeds(setDoc(doc(membre('logi'), 'fils/logistique/messages/m2'), { auteur: 'logi', texte: 'OK' }));
+  await assertFails(setDoc(doc(membre('logi'), 'fils/logistique/messages/m3'), { auteur: 'chefA', texte: 'faux' }));
+  await assertFails(getDocs(collection(membre('repas'), 'fils/logistique/messages')));
+  await assertFails(getDocs(collection(membre('logi'), 'fils/admins/messages')));
+  await assertSucceeds(getDocs(collection(admin(), 'fils/admins/messages')));
+});
+
+test('alertes : lancées par l’adjoint sécurité, vues par la logistique', async () => {
+  await assertSucceeds(setDoc(doc(membre('secuA'), 'alertes/a2'), { auteur: 'secuA', message: 'Chute' }));
+  await assertFails(setDoc(doc(membre('pelA'), 'alertes/a3'), { auteur: 'pelA' }));
+  await assertSucceeds(getDoc(doc(membre('logi'), 'alertes/a1')));
+  await assertSucceeds(getDoc(doc(membre('secuA'), 'alertes/a1')));
+  await assertFails(getDoc(doc(membre('pelA'), 'alertes/a1')));
+  await assertSucceeds(setDoc(doc(membre('logi'), 'alertes/a1'), { traitee: true }, { merge: true }));
+  await assertFails(setDoc(doc(membre('logi'), 'alertes/a1'), { message: 'changé' }, { merge: true }));
+});
+
+test('le chef nomme l’adjoint sécurité de son chapitre, rien d’autre', async () => {
+  const db = membre('chefA');
+  await assertSucceeds(setDoc(doc(db, 'membres/pelA'), { roles: ['pelerin', 'securite'] }, { merge: true }));
+  await assertSucceeds(setDoc(doc(db, 'membres/pelA'), { roles: ['pelerin'] }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelA'), { roles: ['pelerin', 'logistique'] }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelA'), { chapitre: 'B' }, { merge: true }));
+  await assertFails(setDoc(doc(db, 'membres/pelB'), { roles: ['pelerin', 'securite'] }, { merge: true }));
+});
+
+test('jetons de notification et numéro d’alerte', async () => {
+  await assertSucceeds(setDoc(doc(membre('pelA'), 'jetons/pelA'), { token: 't' }));
+  await assertFails(setDoc(doc(membre('pelA'), 'jetons/pelB'), { token: 't' }));
+  await assertFails(getDoc(doc(membre('pelA'), 'jetons/pelA')));
+  await assertSucceeds(getDoc(doc(membre('pelA'), 'config/app')));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'config/app')));
+  await assertFails(setDoc(doc(membre('logi'), 'config/app'), { smsAlerte: '07' }));
 });

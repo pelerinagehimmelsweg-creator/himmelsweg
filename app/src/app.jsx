@@ -6,6 +6,7 @@ import { Connexion } from './ecrans/connexion.jsx';
 import { Contenus } from './ecrans/contenus.jsx';
 import { FicheMembre, ListeMembres } from './ecrans/membres.jsx';
 import { AdminInscriptions, AdminQuestionnaire } from './ecrans/admin.jsx';
+import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
 
 function periodeDuJour(aujourdhui = new Date().toISOString().slice(0, 10)) {
@@ -51,20 +52,29 @@ export function App({ donnees }) {
 
   const d = droits(session);
   const voitDesPelerins = d.voirTousLesMembres || ['chef', 'securite'].some((r) => session.roles?.includes(r));
-  const [page, sous] = route.split('/');
+  const [page, sous, detail] = route.split('/');
   const onglets = [
     { id: 'avant', nom: 'Avant' },
     { id: 'pendant', nom: 'Pendant' },
     { id: 'apres', nom: 'Après' },
-    ...(voitDesPelerins ? [{ id: 'pelerins', nom: d.admin ? 'Pèlerins' : 'Mon équipe' }] : []),
+    ...(voitDesPelerins ? [{ id: 'pelerins', nom: d.voirTousLesMembres ? 'Pèlerins' : 'Chapitre' }] : []),
+    ...(voitEquipe(session) ? [{ id: 'equipe', nom: 'Équipe' }] : []),
     { id: 'moi', nom: 'Moi' },
   ];
   const actif = onglets.some((o) => o.id === page) ? page : page === 'admin' && d.admin ? 'moi' : periodeDuJour();
 
   let contenu;
   if (page === 'admin' && d.admin) {
-    contenu = sous === 'questionnaire' ? <AdminQuestionnaire donnees={donnees} /> : <AdminInscriptions donnees={donnees} />;
+    contenu =
+      sous === 'questionnaire' ? (
+        <AdminQuestionnaire donnees={donnees} />
+      ) : sous === 'notification' ? (
+        <EnvoiNotification donnees={donnees} />
+      ) : (
+        <AdminInscriptions donnees={donnees} />
+      );
   } else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
+  else if (actif === 'equipe') contenu = <Equipe donnees={donnees} session={session} sous={sous} detail={detail} />;
   else if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;
   else if (actif === 'pelerins') contenu = <ListeMembres donnees={donnees} session={session} />;
   else if (actif === 'moi') contenu = <Moi donnees={donnees} session={session} />;

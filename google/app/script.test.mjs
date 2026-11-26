@@ -16,7 +16,8 @@ const CLE_SA = {
 };
 const BASE = 'https://firestore.googleapis.com/v1/projects/himmelsweg-cbd26/databases/(default)/documents';
 
-function charger({ proprietes = {}, base = {}, paye = () => false, maintenant } = {}) {
+function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, sessions = {} } = {}) {
+  const envoisFcm = [];
   const appels = [];
   const emails = [];
   const intentions = [];
@@ -42,8 +43,29 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant } 
     }
     const mi = /\/checkout-intents\/(\d+)$/.exec(url);
     if (mi) return rep(200, paye(Number(mi[1])) ? { id: Number(mi[1]), order: { id: 55, payments: [{ state: 'Authorized' }] } } : { id: Number(mi[1]) });
+    if (url.includes('accounts:lookup')) {
+      const u = sessions[JSON.parse(opts.payload).idToken];
+      return u ? rep(200, { users: [u] }) : rep(400, { error: { message: 'INVALID_ID_TOKEN' } });
+    }
+    if (url.includes('fcm.googleapis.com')) {
+      const { message } = JSON.parse(opts.payload);
+      if (message.token === 'perime') return rep(404, { error: { status: 'NOT_FOUND', details: 'UNREGISTERED' } });
+      envoisFcm.push(message);
+      return rep(200, { name: 'ok' });
+    }
+    if (url.endsWith(':runQuery')) {
+      const { collectionId } = JSON.parse(opts.payload).structuredQuery.from[0];
+      return rep(
+        200,
+        [...docs.keys()]
+          .filter((k) => k.split('/').at(-2) === collectionId)
+          .map((k) => ({ document: { name: `projects/x/databases/(default)/documents/${k}`, fields: docs.get(k) } })),
+      );
+    }
     if (url.endsWith(':commit')) {
-      const { writes } = JSON.parse(opts.payload);
+      let { writes } = JSON.parse(opts.payload);
+      writes.filter((w) => w.delete).forEach((w) => docs.delete(w.delete.split('/documents/')[1]));
+      writes = writes.filter((w) => !w.delete);
       const chemins = writes.map((w) => w.update.name.split('/documents/')[1]);
       if (writes.some((w, i) => w.currentDocument?.exists === false && docs.has(chemins[i]))) return rep(409, 'ALREADY_EXISTS');
       writes.forEach((w, i) => {
@@ -57,7 +79,7 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant } 
       return rep(200, {});
     }
     if (url.startsWith(BASE + '/')) {
-      const [chemin] = url.slice(BASE.length + 1).split('?');
+      const chemin = decodeURIComponent(url.slice(BASE.length + 1).split('?')[0]);
       if (url.includes('?pageSize')) {
         const documents = [...docs.keys()]
           .filter((k) => k.startsWith(chemin + '/') && !k.slice(chemin.length + 1).includes('/'))
@@ -119,7 +141,7 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant } 
   for (const [k, v] of Object.entries(base)) ecrire(k, v);
   const lire = (chemin) => (docs.has(chemin) ? JSON.parse(JSON.stringify(s.depuisChamps(docs.get(chemin)))) : null);
   const appeler = (demande) => JSON.parse(s.doPost({ postData: { contents: JSON.stringify(demande) } }).texte);
-  return { ...s, appels, emails, intentions, props, docs, ecrire, lire, appeler };
+  return { ...s, appels, emails, intentions, envoisFcm, props, docs, ecrire, lire, appeler };
 }
 
 /** Base avec le questionnaire et les tarifs de départ. */
@@ -335,4 +357,61 @@ test('connexion : une clé valable donne un jeton Firebase correctement signé',
   const refus = s.appeler({ action: 'connexion', cle: 'CleInconnue_123456789' });
   assert.ok(!refus.jeton && refus.erreur);
   assert.ok(!s.appeler({ action: 'connexion', cle: '../admins/x' }).jeton);
+});
+
+const EQUIPE = {
+  'admins/directrice@gmail.com': {},
+  'membres/logi': { prenom: 'Damien', roles: ['pelerin', 'logistique'], chapitre: 'A', statut: 'inscrit' },
+  'membres/secu': { prenom: 'Charles', nom: 'Klein', roles: ['pelerin', 'securite'], chapitre: 'A', statut: 'inscrit' },
+  'membres/pel1': { prenom: 'Paul', roles: ['pelerin'], chapitre: 'A', statut: 'inscrit' },
+  'membres/pel2': { prenom: 'Anne', roles: ['pelerin'], chapitre: 'B', statut: 'inscrit' },
+  'membres/attente': { prenom: 'Zoé', roles: ['pelerin'], chapitre: 'B', statut: 'en_attente' },
+  'membres/pel1/prive/fiche': { regime: 'Végétarien', sante: 'secret' },
+  'membres/pel2/prive/fiche': { regime: 'Aucun' },
+  'membres/secu/prive/fiche': { regime: 'Aucun' },
+  'membres/attente/prive/fiche': { regime: 'Sans gluten' },
+  'jetons/logi': { token: 'tok-logi' },
+  'jetons/pel1': { token: 'tok-pel1' },
+  'jetons/pel2': { token: 'perime' },
+  'jetons/secu': { token: 'tok-secu' },
+  'alertes/al1': { auteur: 'secu', nom: 'Charles Klein', chapitre: 'Saint-Joseph', message: 'Cheville tordue', position: { lat: 48.2, lng: 7.4 } },
+};
+const SESSIONS = {
+  'jeton-admin': { localId: 'google-uid', email: 'Directrice@gmail.com', emailVerified: true },
+  'jeton-secu': { localId: 'secu' },
+  'jeton-pel1': { localId: 'pel1' },
+};
+
+test('alerte accident : seule la logistique est prévenue, par celui qui l’a lancée', () => {
+  const s = charger({ base: EQUIPE, sessions: SESSIONS });
+  const r = s.appeler({ action: 'notifier', idToken: 'jeton-secu', cible: 'alerte', valeur: 'al1' });
+  assert.equal(r.envoyes, 1);
+  assert.deepEqual(s.envoisFcm.map((m) => m.token), ['tok-logi']);
+  assert.match(s.envoisFcm[0].webpush.notification.body, /Charles Klein.*Cheville tordue.*maps\.google\.com\/\?q=48\.2,7\.4/);
+  assert.ok(s.appeler({ action: 'notifier', idToken: 'jeton-pel1', cible: 'alerte', valeur: 'al1' }).erreur);
+  assert.ok(s.appeler({ action: 'notifier', idToken: 'faux', cible: 'alerte', valeur: 'al1' }).erreur);
+});
+
+test('notifications : réservées aux admins, ciblées, jetons périmés effacés', () => {
+  const s = charger({ base: EQUIPE, sessions: SESSIONS });
+  assert.match(s.appeler({ action: 'notifier', idToken: 'jeton-pel1', cible: 'tous', titre: 'x', texte: 'y' }).erreur, /administrateurs/);
+  const tous = s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'tous', titre: 'Départ', texte: 'Rendez-vous à 8 h' });
+  assert.equal(tous.destinataires, 4); // pas l'inscription en attente
+  assert.equal(tous.envoyes, 3);
+  assert.equal(s.lire('jetons/pel2'), null);
+  s.envoisFcm.length = 0;
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'chapitre', valeur: 'A', titre: 'Chapitre', texte: 'Messe à 7 h' });
+  assert.deepEqual(s.envoisFcm.map((m) => m.token).sort(), ['tok-logi', 'tok-pel1', 'tok-secu']);
+  s.envoisFcm.length = 0;
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'role', valeur: 'securite', titre: 'Sécurité', texte: 'Point à 21 h' });
+  assert.deepEqual(s.envoisFcm.map((m) => m.token), ['tok-secu']);
+});
+
+test('équipe repas : nombre par régime des inscrits confirmés, sans aucun nom', () => {
+  const s = charger({ base: EQUIPE });
+  s.suivre();
+  const stats = s.lire('stats/repas');
+  assert.equal(stats.total, 4);
+  assert.deepEqual(stats.parRegime, { Végétarien: 1, Aucun: 2, 'Non précisé': 1 });
+  assert.ok(!JSON.stringify(stats).includes('Paul'));
 });

@@ -24,6 +24,8 @@ const API_HELLOASSO = 'https://api.helloasso.com';
 const FIRESTORE = `https://firestore.googleapis.com/v1/projects/${PROJET_FIREBASE}/databases/(default)/documents`;
 const RELANCES_JOURS = [3, 10];
 const MAX_PERSONNES = 10;
+// Clé web publique du projet Firebase (la même que dans l'app) : sert à vérifier qui appelle.
+const CLE_WEB = 'AIzaSyAr-mO39_gnd3-nzPpzyqXD7ns5xpruWtA';
 
 /* ------------------------------------------------------------------ */
 /* À lancer une fois à la main : vérifie les réglages et programme le  */
@@ -60,6 +62,7 @@ function doPost(e) {
     if (demande.action === 'inscription') return json_(inscrire_(demande));
     if (demande.action === 'payer') return json_(payer_(demande.ref));
     if (demande.action === 'verifier') return json_(verifier_(demande.ref));
+    if (demande.action === 'notifier') return json_(notifier_(demande));
     return json_({ erreur: 'Demande invalide.' });
   } catch (err) {
     console.error(err);
@@ -279,6 +282,11 @@ function jetonHelloAsso_() {
 /* ------------------------------------------------------------------ */
 
 function suivre() {
+  try {
+    majStatsRepas_();
+  } catch (err) {
+    console.error('Comptes des repas : ' + err.message);
+  }
   const maintenant = Date.now();
   listerCollection_('dossiers').forEach((dossier) => {
     const ref = dossier.id;
@@ -327,6 +335,114 @@ function envoyerLiensDuDossier_(ref) {
   } finally {
     verrou.releaseLock();
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Comptes pour l'équipe repas et notifications                       */
+/* ------------------------------------------------------------------ */
+
+/** Nombre d'inscrits confirmés par régime, sans aucun nom : seule chose que l'équipe repas voit. */
+function majStatsRepas_() {
+  const membres = listerCollection_('membres').filter((m) => m.statut !== 'en_attente');
+  const regimes = {};
+  requeteGroupe_('prive').forEach((d) => {
+    const morceaux = d.chemin.split('/');
+    if (morceaux[0] === 'membres' && morceaux[2] === 'prive' && morceaux[3] === 'fiche') regimes[morceaux[1]] = d.valeurs.regime;
+  });
+  const parRegime = {};
+  membres.forEach((m) => {
+    const r = regimes[m.id] || 'Non précisé';
+    parRegime[r] = (parRegime[r] || 0) + 1;
+  });
+  enregistrer_([ecriture_('stats/repas', { total: membres.length, parRegime, maj: new Date() })]);
+}
+
+/** Qui appelle ? Vérifie la session Firebase envoyée par l'app. */
+function qui_(idToken) {
+  const rep = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + CLE_WEB, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ idToken: String(idToken || '') }),
+    muteHttpExceptions: true,
+  });
+  if (rep.getResponseCode() !== 200) throw refus_('Session expirée : rouvrez l’app et réessayez.');
+  const u = (JSON.parse(rep.getContentText()).users || [])[0];
+  if (!u) throw refus_('Session expirée : rouvrez l’app et réessayez.');
+  const email = u.email && u.emailVerified ? String(u.email).toLowerCase() : '';
+  return { uid: u.localId, admin: !!email && !!lireDocument_('admins/' + encodeURIComponent(email)) };
+}
+
+/**
+ * Notification sur les téléphones.
+ * cible : 'tous' | 'chapitre' | 'role' (admins seulement) ou 'alerte' (l'adjoint sécurité qui l'a lancée).
+ */
+function notifier_(d) {
+  const appelant = qui_(d.idToken);
+  const membres = listerCollection_('membres').filter((m) => m.statut !== 'en_attente');
+  let destinataires;
+  let titre;
+  let texte;
+  if (d.cible === 'alerte') {
+    const alerte = /^[A-Za-z0-9_-]{1,64}$/.test(d.valeur || '') && lireDocument_('alertes/' + d.valeur);
+    if (!alerte || alerte.auteur !== appelant.uid) throw refus_('Alerte introuvable.');
+    destinataires = membres.filter((m) => (m.roles || []).indexOf('logistique') !== -1);
+    titre = 'Alerte accident';
+    texte = alerte.nom + (alerte.chapitre ? ' (chapitre ' + alerte.chapitre + ')' : '') + (alerte.message ? ' : ' + alerte.message : '') +
+      (alerte.position ? ' – position : https://maps.google.com/?q=' + alerte.position.lat + ',' + alerte.position.lng : '');
+  } else {
+    if (!appelant.admin) throw refus_('Réservé aux administrateurs.');
+    titre = String(d.titre || '').trim().slice(0, 80);
+    texte = String(d.texte || '').trim().slice(0, 500);
+    if (!titre || !texte) throw refus_('Écrivez un titre et un message.');
+    destinataires = membres.filter((m) =>
+      d.cible === 'tous' ? true : d.cible === 'chapitre' ? m.chapitre === d.valeur : d.cible === 'role' ? (m.roles || []).indexOf(d.valeur) !== -1 : false,
+    );
+  }
+  return envoyerNotifications_(destinataires.map((m) => m.id), titre, texte);
+}
+
+function envoyerNotifications_(ids, titre, texte) {
+  const voulus = {};
+  ids.forEach((id) => (voulus[id] = true));
+  const jetons = listerCollection_('jetons').filter((j) => voulus[j.id] && j.token);
+  let envoyes = 0;
+  const perimes = [];
+  jetons.forEach((j) => {
+    const rep = UrlFetchApp.fetch(`https://fcm.googleapis.com/v1/projects/${PROJET_FIREBASE}/messages:send`, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + jetonGoogle_() },
+      payload: JSON.stringify({
+        message: {
+          token: j.token,
+          webpush: {
+            notification: { title: titre, body: texte, icon: ADRESSE_APP + '/icone-192.png' },
+            fcm_options: { link: ADRESSE_APP + '/' },
+          },
+        },
+      }),
+      muteHttpExceptions: true,
+    });
+    if (rep.getResponseCode() === 200) envoyes++;
+    else if (rep.getResponseCode() === 404 || /UNREGISTERED|INVALID_ARGUMENT/.test(rep.getContentText())) perimes.push(j.id);
+  });
+  if (perimes.length) enregistrer_(perimes.map((id) => ({ delete: nomDocument_('jetons/' + id) })));
+  return { envoyes, destinataires: ids.length, sansNotification: ids.length - envoyes };
+}
+
+/** Tous les documents d'une sous-collection, quel que soit le parent (ex. toutes les fiches « prive »). */
+function requeteGroupe_(collection) {
+  const rep = UrlFetchApp.fetch(FIRESTORE + ':runQuery', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + jetonGoogle_() },
+    payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: collection, allDescendants: true }] } }),
+    muteHttpExceptions: true,
+  });
+  if (rep.getResponseCode() !== 200) throw new Error('Firebase illisible (' + rep.getResponseCode() + ').');
+  return JSON.parse(rep.getContentText())
+    .filter((r) => r.document)
+    .map((r) => ({ chemin: r.document.name.split('/documents/')[1], valeurs: depuisChamps(r.document.fields || {}) }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -510,14 +626,14 @@ function jetonDeConnexion_(uid) {
 /** Jeton d'accès du compte de service pour lire et écrire dans la base. */
 function jetonGoogle_() {
   const cache = CacheService.getScriptCache();
-  const enCache = cache.get('jeton_google');
+  const enCache = cache.get('jeton_google_2');
   if (enCache) return enCache;
   const sa = cleFirebase_();
   const maintenant = Math.floor(Date.now() / 1000);
   const assertion = jwt_(
     {
       iss: sa.client_email,
-      scope: 'https://www.googleapis.com/auth/datastore',
+      scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging',
       aud: 'https://oauth2.googleapis.com/token',
       iat: maintenant,
       exp: maintenant + 3600,
@@ -531,7 +647,7 @@ function jetonGoogle_() {
   });
   if (rep.getResponseCode() !== 200) throw new Error('Clé Firebase refusée (' + rep.getResponseCode() + ').');
   const jeton = JSON.parse(rep.getContentText()).access_token;
-  cache.put('jeton_google', jeton, 3000);
+  cache.put('jeton_google_2', jeton, 3000);
   return jeton;
 }
 
