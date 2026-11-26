@@ -64,6 +64,7 @@ export function membresExemple() {
         volontaireChef: i === 2 || i === 7,
         reponses: {
           volontaireChef: i === 2 || i === 7 ? 'Oui' : 'Non',
+          chorale: i % 4 === 1 ? 'Oui' : 'Non',
           ...(groupe === 'H' ? { aideLogistique: i % 3 === 0 ? 'Oui' : 'Non' } : {}),
         },
         inscritLe: `2027-0${1 + (i % 3)}-1${i % 9}`,

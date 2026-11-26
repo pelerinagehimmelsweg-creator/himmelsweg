@@ -164,6 +164,7 @@ const ADULTE = {
     sante: 'Genou fragile',
     regime: 'Sans gluten',
     volontaireChef: 'Oui',
+    chorale: 'Oui',
     aideLogistique: 'Non',
     consentementSante: true,
   },
@@ -184,6 +185,7 @@ const MINEURE = {
     referentTel: '06 11 22 33 44',
     autorisationParentale: { image: 'data:image/png;base64,AAAA', signataire: 'Paul Ott', le: '2027-01-15' },
     volontaireChef: 'Non',
+    chorale: 'Non',
     aideLogistique: 'Oui', // question réservée aux hommes : ne doit pas être gardée
     consentementSante: true,
   },
@@ -218,7 +220,7 @@ test('une inscription crée les fiches et prépare le paiement HelloAsso au bon 
   assert.equal(paul.email, 'paul@exemple.fr'); // vide : celle du payeur
   assert.equal(paul.statut, 'en_attente');
   assert.equal(paul.volontaireChef, true);
-  assert.deepEqual(paul.reponses, { volontaireChef: 'Oui', aideLogistique: 'Non' });
+  assert.deepEqual(paul.reponses, { volontaireChef: 'Oui', aideLogistique: 'Non', chorale: 'Oui' });
   assert.deepEqual(s.lire(`membres/${idPaul}/prive/fiche`), {
     urgenceNom: 'Anne Ott',
     urgenceTel: '07 25 11 22 33',
@@ -228,7 +230,7 @@ test('une inscription crée les fiches et prépare le paiement HelloAsso au bon 
   });
   const francoise = s.lire(`membres/${idFrancoise}`);
   assert.equal(francoise.email, 'francoise@exemple.fr');
-  assert.deepEqual(francoise.reponses, { volontaireChef: 'Non' }); // pas la question des hommes
+  assert.deepEqual(francoise.reponses, { volontaireChef: 'Non', chorale: 'Non' }); // pas la question des hommes
   const priveF = s.lire(`membres/${idFrancoise}/prive/fiche`);
   assert.equal(priveF.referentNom, 'Anne Ott');
   assert.equal(priveF.autorisationParentale.signataire, 'Paul Ott');
@@ -363,7 +365,7 @@ const EQUIPE = {
   'admins/directrice@gmail.com': {},
   'membres/logi': { prenom: 'Damien', roles: ['pelerin', 'logistique'], chapitre: 'A', statut: 'inscrit' },
   'membres/secu': { prenom: 'Charles', nom: 'Klein', roles: ['pelerin', 'securite'], chapitre: 'A', statut: 'inscrit' },
-  'membres/pel1': { prenom: 'Paul', roles: ['pelerin'], chapitre: 'A', statut: 'inscrit' },
+  'membres/pel1': { prenom: 'Paul', roles: ['pelerin'], chapitre: 'A', statut: 'inscrit', reponses: { chorale: 'Oui' } },
   'membres/pel2': { prenom: 'Anne', roles: ['pelerin'], chapitre: 'B', statut: 'inscrit' },
   'membres/attente': { prenom: 'Zoé', roles: ['pelerin'], chapitre: 'B', statut: 'en_attente' },
   'membres/pel1/prive/fiche': { regime: 'Végétarien', sante: 'secret' },
@@ -405,6 +407,9 @@ test('notifications : réservées aux admins, ciblées, jetons périmés effacé
   s.envoisFcm.length = 0;
   s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'role', valeur: 'securite', titre: 'Sécurité', texte: 'Point à 21 h' });
   assert.deepEqual(s.envoisFcm.map((m) => m.token), ['tok-secu']);
+  s.envoisFcm.length = 0;
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'role', valeur: 'chorale', titre: 'Chorale', texte: 'Répétition à 18 h' });
+  assert.deepEqual(s.envoisFcm.map((m) => m.token), ['tok-pel1']);
 });
 
 test('équipe repas : nombre par régime des inscrits confirmés, sans aucun nom', () => {

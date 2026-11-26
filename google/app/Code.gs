@@ -395,7 +395,7 @@ function notifier_(d) {
     texte = String(d.texte || '').trim().slice(0, 500);
     if (!titre || !texte) throw refus_('Écrivez un titre et un message.');
     destinataires = membres.filter((m) =>
-      d.cible === 'tous' ? true : d.cible === 'chapitre' ? m.chapitre === d.valeur : d.cible === 'role' ? (m.roles || []).indexOf(d.valeur) !== -1 : false,
+      d.cible === 'tous' ? true : d.cible === 'chapitre' ? m.chapitre === d.valeur : d.cible === 'role' ? (m.roles || []).indexOf(d.valeur) !== -1 || (d.valeur === 'chorale' && (m.reponses || {}).chorale === 'Oui') : false,
     );
   }
   return envoyerNotifications_(destinataires.map((m) => m.id), titre, texte);

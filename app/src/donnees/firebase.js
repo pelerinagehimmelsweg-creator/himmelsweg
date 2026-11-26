@@ -76,7 +76,13 @@ export function creerFirebase(config, urlScript, cleVapid) {
 
   // Première connexion d'un admin : on installe le questionnaire et les tarifs de départ.
   async function installerQuestionnaire() {
-    if ((await getDoc(doc(db, 'config', 'inscription'))).exists()) return;
+    if ((await getDoc(doc(db, 'config', 'inscription'))).exists()) {
+      // Questions de base ajoutées après l'installation (ex. chorale) : on les crée si elles manquent.
+      for (const { id, ...q } of QUESTIONS_DEPART.filter((x) => x.systeme)) {
+        if (!(await getDoc(doc(db, 'questions', id))).exists()) await setDoc(doc(db, 'questions', id), q);
+      }
+      return;
+    }
     const lot = writeBatch(db);
     lot.set(doc(db, 'config', 'inscription'), { ...CONFIG_DEPART, ouverte: false });
     QUESTIONS_DEPART.forEach(({ id, ...q }) => lot.set(doc(db, 'questions', id), q));

@@ -679,6 +679,7 @@ export function EnvoiNotification({ donnees }) {
     ['securite', 'Adjoints sécurité'],
     ['logistique', 'Logistique'],
     ['repas', 'Équipe repas'],
+    ['chorale', 'Chorale'],
   ];
   const envoyer = async (e) => {
     e.preventDefault();
