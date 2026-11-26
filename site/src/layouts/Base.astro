@@ -1,0 +1,97 @@
+---
+import '@fontsource/cinzel/500.css';
+import '@fontsource/cinzel/700.css';
+import '@fontsource-variable/source-sans-3';
+import '../styles/global.css';
+import { Image } from 'astro:assets';
+import logo from '../assets/logo-blason.png';
+import { reglages, menu as lireMenu } from '../lib/donnees';
+const r = await reglages();
+const menu = await lireMenu();
+
+interface Props {
+  titre?: string;
+  description?: string;
+}
+const { titre, description = `Himmelsweg, le Chemin du Ciel : trois jours de marche et de prière dans la campagne alsacienne, ${r.dates}.` } = Astro.props;
+const titreComplet = titre ? `${titre} – Himmelsweg` : `Himmelsweg – Pèlerinage en Alsace, ${r.dates}`;
+const chemin = Astro.url.pathname;
+const actif = (lien: string) => chemin === lien || chemin.startsWith(lien);
+const annee = new Date().getFullYear();
+---
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titreComplet}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="canonical" href={new URL(chemin, Astro.site)} />
+    <meta property="og:title" content={titreComplet} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL('/og-image.jpg', Astro.site)} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="theme-color" content="#b32d24" />
+  </head>
+  <body>
+    <a class="saut" href="#contenu">Aller au contenu</a>
+    {r.bandeau && <div class="bandeau">{r.bandeau}</div>}
+    <header class="entete">
+      <div class="entete-int">
+        <a href="/" class="marque" aria-label="Himmelsweg, accueil">
+          <Image src={logo} alt="" width={64} height={64} loading="eager" />
+          <span>
+            <span class="marque-nom">Himmelsweg</span>
+            <span class="marque-sous">Le Chemin du Ciel</span>
+          </span>
+        </a>
+        <input type="checkbox" id="menu-ouvert" class="menu-case" />
+        <label for="menu-ouvert" class="menu-bouton" aria-label="Ouvrir le menu">
+          <span></span><span></span><span></span>
+        </label>
+        <nav class="nav" aria-label="Menu principal">
+          <ul>
+            {menu.map((m) => (
+              <li class={m.sous_menu ? 'a-sous-menu' : ''}>
+                <a href={m.lien} aria-current={actif(m.lien) ? 'page' : undefined}>{m.titre}</a>
+                {m.sous_menu && (
+                  <ul class="sous-menu">
+                    {m.sous_menu.map((s) => (
+                      <li><a href={s.lien} aria-current={actif(s.lien) ? 'page' : undefined}>{s.titre}</a></li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="contenu">
+      <slot />
+    </main>
+
+    <footer class="pied">
+      <div class="pied-int">
+        <div>
+          <p class="pied-nom">Himmelsweg</p>
+          <p>{r.adresse}</p>
+          <p class="pied-aumonerie">L'aumônerie du pèlerinage est confiée aux missionnaires de la Miséricorde divine.</p>
+        </div>
+        <div class="pied-liens">
+          <a href={`mailto:${r.email}`}>{r.email}</a>
+          {r.instagram && <a href={r.instagram} rel="noopener">Instagram</a>}
+          <a href="/mentions-legales/">Mentions légales</a>
+        </div>
+        <div>
+          <a class="bouton bouton-clair" href="/don/">Faire un don</a>
+        </div>
+      </div>
+      <p class="pied-copie">© {annee} Himmelsweg – Tous droits réservés</p>
+    </footer>
+  </body>
+</html>

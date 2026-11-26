@@ -1,0 +1,88 @@
+---
+import Base from '../layouts/Base.astro';
+import { Image } from 'astro:assets';
+import logo from '../assets/logo-blason.png';
+import { accueil, reglages, html } from '../lib/donnees';
+const a = await accueil();
+const r = await reglages();
+---
+<Base>
+  <section class="accueil-hero">
+    <Image src={a.image_principale} alt="" widths={[800, 1400, 1800]} sizes="100vw" loading="eager" class="accueil-fond" />
+    <div class="accueil-contenu">
+      <Image src={logo} alt="" width={140} height={140} loading="eager" class="accueil-logo" />
+      {a.surtitre && <p class="accueil-sur">{a.surtitre}</p>}
+      <h1>Himmelsweg{a.sous_titre && <><br /><span>{a.sous_titre}</span></>}</h1>
+      <p class="accueil-dates">{r.dates}</p>
+      <div class="boutons">
+        <a class="bouton" href="/inscription/">S'inscrire</a>
+        <a class="bouton bouton-clair" href="/le-pelerinage/">Découvrir le pèlerinage</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-blanche">
+    <div class="conteneur deux-colonnes">
+      <div class="texte">
+        <p class="surtitre">{r.dates}</p>
+        <h2>{a.presentation_titre}</h2>
+        <Fragment set:html={html(a.presentation)} />
+      </div>
+      {a.presentation_photo && <Image src={a.presentation_photo} alt="" widths={[500, 900]} sizes="(max-width: 800px) 100vw, 50vw" class="photo" />}
+    </div>
+  </section>
+
+  {a.temoignages && a.temoignages.length > 0 && (
+    <section class="section">
+      <div class="conteneur">
+        {a.temoignages_titre && <h2 class="centre">{a.temoignages_titre}</h2>}
+        <div class="deux-colonnes" style="align-items:stretch">
+          {a.temoignages.map((t) => (
+            <figure class="carte temoin">
+              <blockquote>« {t.texte} »</blockquote>
+              <figcaption>
+                {t.photo && <Image src={t.photo} alt="" width={128} height={128} />}
+                <span><strong>{t.nom}</strong>{t.role && <small>{t.role}</small>}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {a.encart_titre && (
+    <section class="section section-rouge">
+      <div class="conteneur deux-colonnes">
+        <div class="texte">
+          <h2>{a.encart_titre}</h2>
+          <Fragment set:html={html(a.encart_texte)} />
+        </div>
+        {a.encart_photo && <Image src={a.encart_photo} alt="" widths={[500, 900]} sizes="(max-width: 800px) 100vw, 50vw" class="photo" />}
+      </div>
+    </section>
+  )}
+
+  {a.aumonerie && (
+    <section class="section section-blanche">
+      <div class="etroit centre">
+        {a.aumonerie_logo && <Image src={a.aumonerie_logo} alt="" width={120} height={120} style="margin:0 auto 1rem" />}
+        <Fragment set:html={html(a.aumonerie)} />
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .accueil-hero { position: relative; min-height: min(88vh, 760px); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--blanc); padding: 3rem 1rem; overflow: hidden; }
+  .accueil-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(35,28,24,.35), rgba(35,28,24,.55)); }
+  :global(.accueil-fond) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; }
+  .accueil-contenu { position: relative; z-index: 1; max-width: 760px; display: flex; flex-direction: column; align-items: center; }
+  :global(.accueil-logo) { width: 120px; height: 120px; filter: drop-shadow(0 4px 14px rgba(0,0,0,.35)); margin-bottom: 1rem; }
+  .accueil-sur { font-family: var(--titre); letter-spacing: .2em; text-transform: uppercase; font-size: .95rem; margin: 0 0 .4rem; }
+  h1 { color: var(--blanc); font-size: clamp(2.4rem, 7vw, 4.5rem); letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 2px 16px rgba(0,0,0,.4); margin-bottom: .3em; }
+  h1 span { display: block; font-size: .42em; letter-spacing: .12em; font-weight: 500; }
+  .accueil-dates { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 700; background: var(--rouge); padding: .3rem 1.2rem; border-radius: 999px; }
+  .accueil-contenu .boutons { justify-content: center; }
+  .section-rouge :global(a) { color: var(--creme); font-weight: 700; }
+</style>

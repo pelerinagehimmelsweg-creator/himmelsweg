@@ -1,0 +1,12 @@
+---
+interface Props { url: string; titre: string; hauteur?: number }
+const { url, titre, hauteur = 750 } = Astro.props;
+---
+{url ? (
+  <iframe class="widget" src={url} title={titre} style={`min-height:${hauteur}px`} loading="lazy" allow="payment"></iframe>
+) : (
+  <div class="carte centre">
+    <p><strong>Les inscriptions ouvriront bientôt.</strong></p>
+    <p>Suivez-nous sur Instagram ou écrivez-nous pour être prévenu(e) de l'ouverture.</p>
+  </div>
+)}

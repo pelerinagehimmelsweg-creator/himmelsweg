@@ -1,0 +1,234 @@
+# Configuration de l'éditeur en ligne Pages CMS (https://app.pagescms.org)
+media:
+  input: site/src/assets/photos
+  output: ../../assets/photos
+  categories: [image]
+
+content:
+  - name: pages
+    label: Pages
+    description: Les pages du site. Le titre de la page donne aussi son adresse (ex. « Programme » → himmelsweg.fr/programme/).
+    type: collection
+    path: site/src/content/pages
+    filename: "{primary}.md"
+    view:
+      primary: title
+      fields: [title]
+      layout: list
+    fields:
+      - name: title
+        label: Titre de la page
+        type: string
+        required: true
+      - name: description
+        label: Résumé (pour Google et les partages)
+        type: text
+      - name: banniere
+        label: Grande photo en haut de la page (facultatif)
+        type: image
+      - name: photo
+        label: Photo à côté du texte (facultatif)
+        type: image
+      - name: body
+        label: Texte de la page
+        type: rich-text
+      - name: bouton
+        label: Bouton sous le texte (facultatif)
+        type: object
+        fields:
+          - name: texte
+            label: Texte du bouton
+            type: string
+          - name: lien
+            label: Lien (ex. /inscription/)
+            type: string
+      - name: etapes
+        label: Étapes du programme (facultatif)
+        type: object
+        list: true
+        fields:
+          - name: jour
+            label: Jour (ex. Vendredi)
+            type: string
+          - name: date
+            label: Date (ex. 7 mai)
+            type: string
+          - name: titre
+            label: Étape (ex. Scherwiller – Ribeauvillé)
+            type: string
+          - name: detail
+            label: Détail
+            type: text
+      - name: faq
+        label: Questions-réponses (facultatif)
+        type: object
+        list: true
+        fields:
+          - name: question
+            label: Question
+            type: string
+          - name: reponse
+            label: Réponse
+            type: rich-text
+            options:
+              media: false
+      - name: widgets
+        label: Formulaires HelloAsso (facultatif)
+        description: Coller l'adresse « widget » fournie par HelloAsso. Laisser vide pour afficher « Inscriptions bientôt ouvertes ».
+        type: object
+        list: true
+        fields:
+          - name: titre
+            label: Titre au-dessus du formulaire
+            type: string
+          - name: url
+            label: Adresse du widget HelloAsso
+            type: string
+          - name: hauteur
+            label: Hauteur en pixels (750 par défaut)
+            type: number
+      - name: formulaire
+        label: Formulaire de contact sur la page
+        type: select
+        default: aucun
+        options:
+          values:
+            - value: aucun
+              label: Aucun
+            - value: contact
+              label: Formulaire de contact
+            - value: entreprises
+              label: Formulaire entreprises (avec type d'aide)
+
+  - name: accueil
+    label: Page d'accueil
+    type: file
+    path: site/src/content/site/accueil.yml
+    fields:
+      - name: type
+        type: string
+        hidden: true
+        default: accueil
+      - name: image_principale
+        label: Grande photo du haut
+        type: image
+        required: true
+      - name: surtitre
+        label: Petit texte au-dessus du nom
+        type: string
+      - name: sous_titre
+        label: Sous-titre sous le nom
+        type: string
+      - name: presentation_titre
+        label: Titre de la présentation
+        type: string
+      - name: presentation
+        label: Texte de présentation
+        type: rich-text
+        options:
+          media: false
+      - name: presentation_photo
+        label: Photo à côté de la présentation
+        type: image
+      - name: temoignages_titre
+        label: Titre des témoignages
+        type: string
+      - name: temoignages
+        label: Témoignages
+        type: object
+        list: true
+        fields:
+          - name: texte
+            label: Témoignage
+            type: text
+          - name: nom
+            label: Nom
+            type: string
+          - name: role
+            label: Rôle (ex. Présidente)
+            type: string
+          - name: photo
+            label: Photo
+            type: image
+      - name: encart_titre
+        label: Encart rouge, titre
+        type: string
+      - name: encart_texte
+        label: Encart rouge, texte
+        type: rich-text
+        options:
+          media: false
+      - name: encart_photo
+        label: Encart rouge, photo
+        type: image
+      - name: aumonerie
+        label: Texte sur l'aumônerie
+        type: rich-text
+        options:
+          media: false
+      - name: aumonerie_logo
+        label: Logo de l'aumônerie
+        type: image
+
+  - name: menu
+    label: Menu
+    type: file
+    path: site/src/content/site/menu.yml
+    fields:
+      - name: type
+        type: string
+        hidden: true
+        default: menu
+      - name: liens
+        label: Liens du menu (glisser pour changer l'ordre)
+        type: object
+        list: true
+        fields:
+          - name: titre
+            label: Texte affiché
+            type: string
+          - name: lien
+            label: Adresse de la page (ex. /programme/)
+            type: string
+          - name: sous_menu
+            label: Sous-menu (facultatif)
+            type: object
+            list: true
+            fields:
+              - name: titre
+                label: Texte affiché
+                type: string
+              - name: lien
+                label: Adresse de la page
+                type: string
+
+  - name: reglages
+    label: Réglages
+    type: file
+    path: site/src/content/site/reglages.yml
+    fields:
+      - name: type
+        type: string
+        hidden: true
+        default: reglages
+      - name: annee
+        label: Année du pèlerinage
+        type: number
+      - name: dates
+        label: Dates (ex. 7-8-9 mai 2027)
+        type: string
+      - name: bandeau
+        label: Bandeau rouge en haut du site (laisser vide pour le masquer)
+        type: string
+      - name: email
+        label: E-mail de contact
+        type: string
+      - name: instagram
+        label: Lien Instagram
+        type: string
+      - name: adresse
+        label: Adresse postale
+        type: string
+      - name: formulaire_google
+        label: Adresse du script Google des formulaires (voir google/README.md)
+        type: string
