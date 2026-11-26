@@ -1,10 +1,11 @@
 ---
-import { contact } from '../config';
+import { reglages } from '../lib/donnees';
+const r = await reglages();
 interface Props { sujet: string; choixAide?: boolean }
 const { sujet, choixAide = false } = Astro.props;
 const aides = ['Aide financière', 'Aide en nature', 'Aide logistique'];
 ---
-<form class="formulaire" data-endpoint={contact.formulaireGoogle} data-email={contact.email} data-sujet={sujet}>
+<form class="formulaire" data-endpoint={r.formulaire_google ?? ''} data-email={r.email} data-sujet={sujet}>
   <input type="hidden" name="sujet" value={sujet} />
   <div class="cache" aria-hidden="true">
     <label>Ne pas remplir <input type="text" name="site_web" tabindex="-1" autocomplete="off" /></label>

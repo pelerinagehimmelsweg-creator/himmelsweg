@@ -15,7 +15,7 @@ dans une feuille Google (dans le Drive) et envoie un e-mail depuis ce Gmail, au 
    - Exécuter en tant que : **Moi**
    - Qui a accès : **Tout le monde**
 6. Copier l'**URL de l'application Web** (elle se termine par `/exec`).
-7. La coller dans `site/src/config.ts`, ligne `formulaireGoogle: ''`.
+7. La coller dans l'éditeur du site : **Réglages → Adresse du script Google des formulaires**.
 
 Tant que cette adresse n'est pas renseignée, le bouton « Envoyer » ouvre simplement la
 messagerie du visiteur avec un e-mail pré-rempli vers secretariat@himmelsweg.fr.

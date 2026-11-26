@@ -1,0 +1,38 @@
+type: accueil
+image_principale: ../../assets/photos/paysage-banniere.jpg
+surtitre: Pèlerinage en Alsace
+sous_titre: le Chemin du Ciel
+presentation_titre: Le pèlerinage Himmelsweg revient !
+presentation: |
+  Vous êtes invités à participer à la troisième édition les 7, 8 et 9 mai 2027.
+
+  Himmelsweg s'adresse à toute personne (à partir de 15 ans) désireuse de Dieu. Les femmes et les hommes marchent chacun de leur côté, sur les mêmes dates.
+
+  Himmelsweg, c'est marcher dans la campagne alsacienne et prier ensemble pour l'Église, notre diocèse, nos paroisses et nos intentions personnelles.
+
+  Himmelsweg, c'est aussi chanter et partager un temps de fraternité avec d'autres pèlerins vivant en Alsace.
+
+  Le pèlerinage Himmelsweg se veut missionnaire ! N'hésitez pas à le proposer à vos amis et collègues qui ne connaîtraient pas encore Jésus.
+
+  **En route sur le chemin du Ciel !**
+presentation_photo: ../../assets/photos/pelerines-dos.jpg
+temoignages_titre: Ils en parlent
+temoignages:
+  - texte: >-
+      Le pèlerinage Himmelsweg a répondu à mes attentes : vivre quelques jours à l'écart pour prier et contempler les magnifiques paysages d'Alsace, marcher entre femmes de tous horizons et de tous âges dans une ambiance conviviale !
+    nom: Sarah
+    role: Présidente
+    photo: ../../assets/photos/sarah.jpg
+  - texte: >-
+      Himmelsweg rappelle que la foi peut se vivre dans la marche, dans le silence, dans le chant, mais surtout dans la communion. Je souhaite à chaque participant de découvrir, au long de ce chemin, la paix profonde et la lumière que le Christ veut déposer en chacun.
+    nom: Abbé Molin
+    role: Curé
+    photo: ../../assets/photos/abbe-molin.jpg
+encart_titre: Trois jours de marche et de prière
+encart_texte: |
+  Une route sans difficulté particulière à travers vignes et villages, une logistique qui transporte vos affaires jusqu'au bivouac, et une messe de clôture avec les familles.
+
+  [Le programme](/programme/) · [Informations pratiques](/informations-pratiques/)
+encart_photo: ../../assets/photos/vignes-automne.jpg
+aumonerie: L'aumônerie du pèlerinage Himmelsweg est confiée aux **missionnaires de la Miséricorde divine**.
+aumonerie_logo: ../../assets/photos/misericorde-divine.jpg

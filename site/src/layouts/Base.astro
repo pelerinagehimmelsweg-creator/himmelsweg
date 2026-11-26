@@ -5,14 +5,16 @@ import '@fontsource-variable/source-sans-3';
 import '../styles/global.css';
 import { Image } from 'astro:assets';
 import logo from '../assets/logo-blason.png';
-import { bandeau, contact, menu, pelerinage } from '../config';
+import { reglages, menu as lireMenu } from '../lib/donnees';
+const r = await reglages();
+const menu = await lireMenu();
 
 interface Props {
   titre?: string;
   description?: string;
 }
-const { titre, description = `Himmelsweg, le Chemin du Ciel : trois jours de marche et de prière dans la campagne alsacienne, ${pelerinage.datesLongues}.` } = Astro.props;
-const titreComplet = titre ? `${titre} – Himmelsweg` : `Himmelsweg – Le pèlerinage d'Alsace, ${pelerinage.dates}`;
+const { titre, description = `Himmelsweg, le Chemin du Ciel : trois jours de marche et de prière dans la campagne alsacienne, ${r.dates}.` } = Astro.props;
+const titreComplet = titre ? `${titre} – Himmelsweg` : `Himmelsweg – Pèlerinage en Alsace, ${r.dates}`;
 const chemin = Astro.url.pathname;
 const actif = (lien: string) => chemin === lien || chemin.startsWith(lien);
 const annee = new Date().getFullYear();
@@ -36,7 +38,7 @@ const annee = new Date().getFullYear();
   </head>
   <body>
     <a class="saut" href="#contenu">Aller au contenu</a>
-    {bandeau && <div class="bandeau">{bandeau}</div>}
+    {r.bandeau && <div class="bandeau">{r.bandeau}</div>}
     <header class="entete">
       <div class="entete-int">
         <a href="/" class="marque" aria-label="Himmelsweg, accueil">
@@ -53,11 +55,11 @@ const annee = new Date().getFullYear();
         <nav class="nav" aria-label="Menu principal">
           <ul>
             {menu.map((m) => (
-              <li class={m.sousMenu ? 'a-sous-menu' : ''}>
+              <li class={m.sous_menu ? 'a-sous-menu' : ''}>
                 <a href={m.lien} aria-current={actif(m.lien) ? 'page' : undefined}>{m.titre}</a>
-                {m.sousMenu && (
+                {m.sous_menu && (
                   <ul class="sous-menu">
-                    {m.sousMenu.map((s) => (
+                    {m.sous_menu.map((s) => (
                       <li><a href={s.lien} aria-current={actif(s.lien) ? 'page' : undefined}>{s.titre}</a></li>
                     ))}
                   </ul>
@@ -77,12 +79,12 @@ const annee = new Date().getFullYear();
       <div class="pied-int">
         <div>
           <p class="pied-nom">Himmelsweg</p>
-          <p>{contact.adresse.slice(1).join(', ')}</p>
+          <p>{r.adresse}</p>
           <p class="pied-aumonerie">L'aumônerie du pèlerinage est confiée aux missionnaires de la Miséricorde divine.</p>
         </div>
         <div class="pied-liens">
-          <a href={`mailto:${contact.email}`}>{contact.email}</a>
-          <a href={contact.instagram} rel="noopener">Instagram</a>
+          <a href={`mailto:${r.email}`}>{r.email}</a>
+          {r.instagram && <a href={r.instagram} rel="noopener">Instagram</a>}
           <a href="/mentions-legales/">Mentions légales</a>
         </div>
         <div>

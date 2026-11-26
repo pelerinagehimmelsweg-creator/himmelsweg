@@ -1,0 +1,85 @@
+---
+// Modèle commun à toutes les pages de src/content/pages/.
+import { getCollection, render } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import TitrePage from '../components/TitrePage.astro';
+import WidgetHelloAsso from '../components/WidgetHelloAsso.astro';
+import FormulaireContact from '../components/FormulaireContact.astro';
+import { html } from '../lib/donnees';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('pages');
+  return pages.map((page) => ({ params: { slug: page.id }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const d = page.data;
+const { Content } = await render(page);
+const aDuTexte = page.body && page.body.trim().length > 0;
+const formulaire = d.formulaire && d.formulaire !== 'aucun' ? d.formulaire : null;
+const ancre = (t?: string | null) => (t ? t.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : undefined);
+---
+<Base titre={d.title} description={d.description ?? undefined}>
+  {d.banniere && <TitrePage titre={d.title} image={d.banniere} position={d.position_banniere ?? undefined} />}
+
+  <section class="section">
+    <div class:list={['conteneur', { 'etroit': !d.photo && !formulaire && !d.widgets?.length }]}>
+      {!d.banniere && <h1 class:list={[{ centre: !d.photo && !formulaire }]}>{d.title}</h1>}
+
+      {aDuTexte && (
+        <div class:list={['page-corps', { 'avec-photo': d.photo, 'avec-formulaire': formulaire }]}>
+          {d.photo && <Image src={d.photo} alt="" widths={[400, 700]} sizes="(max-width: 800px) 90vw, 380px" class="photo page-photo" />}
+          <div class="texte">
+            <Content />
+            {d.bouton?.texte && d.bouton?.lien && <p><a class="bouton" href={d.bouton.lien}>{d.bouton.texte}</a></p>}
+          </div>
+          {formulaire && (
+            <div class="carte"><FormulaireContact sujet={formulaire === 'entreprises' ? 'Entreprises' : 'Contact'} choixAide={formulaire === 'entreprises'} /></div>
+          )}
+        </div>
+      )}
+      {!aDuTexte && formulaire && (
+        <div class="carte etroit"><FormulaireContact sujet={formulaire === 'entreprises' ? 'Entreprises' : 'Contact'} choixAide={formulaire === 'entreprises'} /></div>
+      )}
+
+      {d.etapes && d.etapes.length > 0 && (
+        <ol class="etapes">
+          {d.etapes.map((e) => (
+            <li class="etape">
+              <div class="etape-jour">{e.jour}<span>{e.date?.split(' ')[0]}</span>{e.date?.split(' ').slice(1).join(' ')}</div>
+              <div><h3>{e.titre}</h3>{e.detail && <p>{e.detail}</p>}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {d.faq && d.faq.length > 0 && (
+        <div class="faq">
+          {d.faq.map((q, i) => (
+            <details open={i === 0}>
+              <summary>{q.question}</summary>
+              <div class="reponse" set:html={html(q.reponse)} />
+            </details>
+          ))}
+        </div>
+      )}
+
+      {d.widgets && d.widgets.length > 0 && (
+        <div class="widgets">
+          {d.widgets.length > 1 && (
+            <div class="boutons" style="justify-content:center">
+              {d.widgets.map((w) => w.titre && <a class="bouton" href={`#${ancre(w.titre)}`}>{w.titre}</a>)}
+            </div>
+          )}
+          {d.widgets.map((w) => (
+            <div id={ancre(w.titre)} class="widget-bloc">
+              {w.titre && <h2>{w.titre}</h2>}
+              <WidgetHelloAsso url={w.url ?? ''} titre={w.titre ?? d.title} hauteur={w.hauteur ?? 750} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</Base>

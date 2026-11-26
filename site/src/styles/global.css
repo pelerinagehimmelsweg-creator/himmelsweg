@@ -148,3 +148,24 @@ p { margin: 0 0 1em; }
 .pied-liens { display: grid; gap: .4rem; }
 .pied-copie { max-width: var(--largeur); margin: 2rem auto 0; border-top: 1px solid #3d342e; padding-top: 1rem; font-size: .9rem; text-align: center; }
 @media (max-width: 800px) { .pied-int { grid-template-columns: 1fr; } }
+
+/* Pages modifiables */
+.texte > :last-child { margin-bottom: 0; }
+.texte h2 { margin-top: 1.6em; }
+.texte h2:first-child { margin-top: 0; }
+.texte img { border-radius: var(--rayon); margin: 1.5rem 0; }
+.texte ul, .texte ol { padding-left: 1.3rem; }
+.texte li { margin-bottom: .35rem; }
+.texte blockquote { margin: 1.5rem 0; padding: .5rem 1.25rem; border-left: 4px solid var(--rouge); font-style: italic; }
+.page-corps.avec-photo { display: grid; grid-template-columns: 380px 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+.page-corps.avec-photo .page-photo { position: sticky; top: 110px; }
+.page-corps.avec-formulaire { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+.page-corps.avec-photo.avec-formulaire { grid-template-columns: 300px 1fr 1fr; }
+@media (max-width: 800px) {
+  .page-corps.avec-photo, .page-corps.avec-formulaire, .page-corps.avec-photo.avec-formulaire { grid-template-columns: 1fr; }
+  .page-corps.avec-photo .page-photo { position: static; max-width: 340px; margin: 0 auto; }
+}
+.page-corps + .etapes, .page-corps + .faq { margin-top: 2rem; }
+.widgets { margin-top: 2rem; display: grid; gap: 2rem; }
+.widget-bloc { scroll-margin-top: 100px; }
+.section-rouge a:not(.bouton) { color: var(--creme); }

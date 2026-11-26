@@ -10,6 +10,7 @@
   "dependencies": {
     "@fontsource-variable/source-sans-3": "^5.3.1",
     "@fontsource/cinzel": "^5.3.0",
-    "astro": "^7.4.13"
+    "astro": "^7.4.13",
+    "marked": "^15.0.12"
   }
 }

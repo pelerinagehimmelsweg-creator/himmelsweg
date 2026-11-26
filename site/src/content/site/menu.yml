@@ -1,0 +1,21 @@
+type: menu
+liens:
+  - titre: Le pèlerinage
+    lien: /le-pelerinage/
+    sous_menu:
+      - titre: Informations pratiques
+        lien: /informations-pratiques/
+      - titre: Programme
+        lien: /programme/
+  - titre: Sainte Odile
+    lien: /sainte-odile/
+  - titre: Inscription
+    lien: /inscription/
+  - titre: Contact
+    lien: /contact/
+  - titre: Boutique
+    lien: /boutique/
+  - titre: Don
+    lien: /don/
+  - titre: Entreprises
+    lien: /entreprises/
