@@ -74,6 +74,20 @@ export function Moi({ donnees, session }) {
 
       {d.admin && (
         <section class="carte">
+          <h2>Administration</h2>
+          <div class="actions">
+            <a class="bouton" href="#/admin/inscriptions">
+              Inscriptions et paiements
+            </a>
+            <a class="bouton secondaire" href="#/admin/questionnaire">
+              Questionnaire et tarifs
+            </a>
+          </div>
+        </section>
+      )}
+
+      {d.admin && (
+        <section class="carte">
           <h2>Site internet</h2>
           <p>Les textes et photos de himmelsweg.fr se modifient dans l’éditeur du site.</p>
           <a class="bouton secondaire" href={LIENS.editeurSite} target="_blank" rel="noopener">
