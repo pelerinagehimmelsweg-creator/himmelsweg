@@ -28,10 +28,11 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
+import { REPAS_CONFIG_DEPART, texteAlerte } from './equipes.js';
 import { droits } from './modele.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART } from './questionnaire.js';
 
-export function creerFirebase(config, urlScript) {
+export function creerFirebase(config, urlScript, cleVapid) {
   const app = initializeApp(config);
   const auth = getAuth(app);
   // Copie de la base sur le téléphone : l'app fonctionne hors ligne.
@@ -164,6 +165,101 @@ export function creerFirebase(config, urlScript) {
     inscrire: (demande) => script('inscription', demande),
     etatInscription: (ref) => script('verifier', { ref }),
     payerInscription: (ref) => script('payer', { ref }),
+
+    // Outils des équipes (les droits sont vérifiés par firebase/firestore.rules)
+    ecouterConfigApp: (cb) =>
+      onSnapshot(
+        doc(db, 'config', 'app'),
+        (d) => cb(d.data() ?? {}),
+        () => cb({}),
+      ),
+    enregistrerConfigApp: (c) => setDoc(doc(db, 'config', 'app'), c),
+    ecouterRepas: (cb) =>
+      onSnapshot(
+        doc(db, 'equipes', 'repas'),
+        (d) => cb(d.data() ?? REPAS_CONFIG_DEPART),
+        () => cb(null),
+      ),
+    enregistrerRepas: (c) => setDoc(doc(db, 'equipes', 'repas'), c),
+    // Nombre par régime, calculé par le script Google toutes les 15 minutes (sans aucun nom).
+    ecouterStatsRepas: (cb) =>
+      onSnapshot(
+        doc(db, 'stats', 'repas'),
+        (d) => cb(d.data() ?? { total: 0, parRegime: {}, maj: null }),
+        () => cb(null),
+      ),
+    ecouterListe: (nom, cb) => liste(collection(db, nom), cb),
+    async enregistrerElement(nom, { id, ...el }) {
+      if (id) {
+        await setDoc(doc(db, nom, id), el);
+        return id;
+      }
+      return (await addDoc(collection(db, nom), el)).id;
+    },
+    supprimerElement: (nom, id) => deleteDoc(doc(db, nom, id)),
+    ecouterFil: (equipe, cb) => liste(collection(db, 'fils', equipe, 'messages'), (l) => cb(l.sort((a, b) => String(a.le).localeCompare(String(b.le))))),
+    ecrireFil: (equipe, texte) =>
+      addDoc(collection(db, 'fils', equipe, 'messages'), {
+        auteur: auth.currentUser.uid,
+        nom: `${session?.prenom ?? ''} ${session?.nom ?? ''}`.trim(),
+        texte,
+        le: new Date().toISOString(),
+      }),
+    async lancerAlerte({ message, position }) {
+      const chapitre = session?.chapitre ? (await getDoc(doc(db, 'chapitres', session.chapitre))).data()?.nom ?? '' : '';
+      const alerte = { auteur: auth.currentUser.uid, nom: `${session?.prenom ?? ''} ${session?.nom ?? ''}`.trim(), chapitre, message, position: position ?? null, le: new Date().toISOString(), traitee: false };
+      const ref = await addDoc(collection(db, 'alertes'), alerte);
+      let prevenus = null;
+      try {
+        prevenus = (await script('notifier', { idToken: await auth.currentUser.getIdToken(), cible: 'alerte', valeur: ref.id })).envoyes;
+      } catch {}
+      return { texte: texteAlerte(alerte), prevenus };
+    },
+    ecouterAlertes(cb) {
+      const s = session;
+      if (droits(s).admin || s?.roles?.includes('logistique')) return liste(collection(db, 'alertes'), cb);
+      return liste(query(collection(db, 'alertes'), where('auteur', '==', s?.id ?? '-')), cb);
+    },
+    traiterAlerte: (id) => updateDoc(doc(db, 'alertes', id), { traitee: true }),
+    // Le chef nomme (ou retire) l'adjoint sécurité de son chapitre.
+    async nommerAdjoint(id, oui) {
+      const m = (await getDoc(doc(db, 'membres', id))).data();
+      const roles = new Set(m?.roles ?? []);
+      oui ? roles.add('securite') : roles.delete('securite');
+      await updateDoc(doc(db, 'membres', id), { roles: [...roles] });
+    },
+    notifications: cleVapid ? 'possible' : 'absent',
+    async activerNotifications() {
+      if (!cleVapid) throw new Error('Les notifications ne sont pas encore configurées.');
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        throw new Error('Ce téléphone ne permet pas les notifications. Sur iPhone, installez d’abord l’app sur l’écran d’accueil.');
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') throw new Error('Notifications refusées. Vous pouvez les autoriser dans les réglages du navigateur.');
+      const { getMessaging, getToken } = await import('firebase/messaging');
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' });
+      const token = await getToken(getMessaging(app), { vapidKey: cleVapid, serviceWorkerRegistration: registration });
+      await setDoc(doc(db, 'jetons', auth.currentUser.uid), { token, maj: new Date().toISOString() });
+      return 'Notifications activées sur ce téléphone.';
+    },
+    async envoyerNotification({ cible, valeur, titre, texte }) {
+      return script('notifier', { idToken: await auth.currentUser.getIdToken(), cible, valeur, titre, texte });
+    },
+    // Désistement ou fiche de test : la fiche, ses infos protégées et son lien disparaissent.
+    async supprimerMembre(id) {
+      const cle = (await getDoc(doc(db, 'membres', id, 'admin', 'lien'))).data()?.cle;
+      const lot = writeBatch(db);
+      if (cle) lot.delete(doc(db, 'liens', cle));
+      lot.delete(doc(db, 'membres', id, 'admin', 'lien'));
+      lot.delete(doc(db, 'membres', id, 'prive', 'fiche'));
+      lot.delete(doc(db, 'membres', id));
+      await lot.commit();
+    },
+    async annulerDossier(ref) {
+      const d = (await getDoc(doc(db, 'dossiers', ref))).data();
+      for (const id of d?.membres ?? []) await this.supprimerMembre(id);
+      await updateDoc(doc(db, 'dossiers', ref), { statut: 'annule', annuleLe: serverTimestamp() });
+    },
 
     ecouterDossiers: (cb) => liste(collection(db, 'dossiers'), cb),
     // Chèque, espèces… : le script Google enverra les liens dans les 15 minutes.

@@ -64,6 +64,7 @@ export function AdminInscriptions({ donnees }) {
         <select value={filtre} onChange={(e) => setFiltre(e.currentTarget.value)} aria-label="Filtre">
           <option value="en_attente">En attente de paiement ({dossiers.filter(attente).length})</option>
           <option value="regle">Réglées ({dossiers.filter(regle).length})</option>
+          <option value="annule">Annulées ({dossiers.filter((d) => d.statut === 'annule').length})</option>
           <option value="">Toutes ({dossiers.length})</option>
         </select>
       </div>
@@ -81,6 +82,23 @@ export function AdminInscriptions({ donnees }) {
               {d.mode && ` · ${d.mode}`}
               {attente(d) && d.relances ? ` · ${d.relances} rappel${d.relances > 1 ? 's' : ''} envoyé${d.relances > 1 ? 's' : ''}` : ''}
             </p>
+            {d.statut !== 'annule' && (
+              <button
+                type="button"
+                class="lien-bouton danger"
+                onClick={async () => {
+                  if (!confirm(`Annuler l’inscription de ${d.noms?.join(', ')} ? Les fiches seront effacées. Un éventuel remboursement se fait sur HelloAsso.`)) return;
+                  try {
+                    await donnees.annulerDossier(d.id);
+                    setMsg('Inscription annulée.');
+                  } catch (e) {
+                    setMsg(e.message);
+                  }
+                }}
+              >
+                Annuler l’inscription
+              </button>
+            )}
             {attente(d) && (
               <label class="valider">
                 Payé autrement :

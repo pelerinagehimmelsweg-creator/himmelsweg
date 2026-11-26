@@ -2,6 +2,7 @@ import { Fragment } from 'preact';
 import { useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
+import { ActiverNotifications, ReglageAlerte } from './equipe.jsx';
 import { LIENS, droits, nomRole } from '../donnees/modele.js';
 import { enTexte, erreursPersonne, estVisible, questionsTriees, reponsesDe, versFiche } from '../donnees/questionnaire.js';
 
@@ -43,12 +44,14 @@ export function Moi({ donnees, session }) {
       {roles.length > 0 && (
         <section class="carte">
           <h2>Vos outils d’équipe</h2>
-          <p class="discret">
-            Les écrans {roles.map(nomRole).join(', ')} (repas, parcours, alertes, messagerie) arrivent dans la
-            prochaine version de l’app.
-          </p>
+          <p class="discret">{roles.map(nomRole).join(', ')} : retrouvez-les dans l’onglet Équipe.</p>
+          <a class="bouton secondaire" href="#/equipe">
+            Ouvrir l’onglet Équipe
+          </a>
         </section>
       )}
+
+      {!session.estAdmin && <ActiverNotifications donnees={donnees} />}
 
       {d.admin && (
         <section class="carte">
@@ -60,9 +63,14 @@ export function Moi({ donnees, session }) {
             <a class="bouton secondaire" href="#/admin/questionnaire">
               Questionnaire et tarifs
             </a>
+            <a class="bouton secondaire" href="#/admin/notification">
+              Envoyer une notification
+            </a>
           </div>
         </section>
       )}
+
+      {d.admin && <ReglageAlerte donnees={donnees} />}
 
       {d.admin && (
         <section class="carte">

@@ -45,7 +45,7 @@ export function ListeMembres({ donnees, session }) {
 
   return (
     <>
-      <h1>{d.admin ? 'Pèlerins' : 'Mon équipe'}</h1>
+      <h1>{d.voirTousLesMembres ? 'Pèlerins' : 'Mon chapitre'}</h1>
       {!d.voirTousLesMembres && session.chapitre && <p class="discret">Chapitre {nomChapitre(session.chapitre)}</p>}
       {d.voirTousLesMembres && (
       <div class="chiffres">
@@ -150,6 +150,17 @@ export function FicheMembre({ donnees, session, id }) {
     modifier({ roles: ROLES.map((x) => x.id).filter((x) => roles.has(x)) });
   };
   const chapitresDuGroupe = chapitres.filter((c) => c.groupe === m.groupe);
+  // Le chef choisit l'adjoint sécurité parmi les pèlerins de son chapitre.
+  const chefIci = !admin && session.roles?.includes('chef') && !!session.chapitre && m.chapitre === session.chapitre;
+  const supprimer = async () => {
+    if (!confirm(`Supprimer l’inscription de ${nomComplet(m)} ? Sa fiche, ses réponses et son lien seront effacés. Un éventuel remboursement se fait sur HelloAsso.`)) return;
+    try {
+      await donnees.supprimerMembre(id);
+      location.hash = '#/pelerins';
+    } catch (e) {
+      setMsg(e.message);
+    }
+  };
   const reponses = reponsesDe(m, prive);
   const affichees = questionsTriees(questions).filter(
     (q) => q.type !== 'info' && !CHAMPS_FICHE.includes(q.id) && estVisible(q, m.groupe, reponses),
@@ -254,6 +265,20 @@ export function FicheMembre({ donnees, session, id }) {
         ) : (
           <p>{(m.roles ?? []).map(nomRole).join(', ') || '—'}</p>
         )}
+        {chefIci && m.id !== session.id && (
+          <button
+            type="button"
+            class={`bouton petit${m.roles?.includes('securite') ? ' secondaire' : ''}`}
+            onClick={() =>
+              donnees
+                .nommerAdjoint(id, !m.roles?.includes('securite'))
+                .then(() => setMsg(m.roles?.includes('securite') ? 'Ce n’est plus l’adjoint sécurité.' : 'Nommé adjoint sécurité du chapitre.'))
+                .catch((e) => setMsg(e.message))
+            }
+          >
+            {m.roles?.includes('securite') ? 'Retirer le rôle d’adjoint sécurité' : 'Nommer adjoint sécurité'}
+          </button>
+        )}
       </section>
 
       <section class="carte sensible">
@@ -287,6 +312,15 @@ export function FicheMembre({ donnees, session, id }) {
               Remplacer le lien (perdu ou partagé)
             </button>
           </div>
+        </section>
+      )}
+
+      {admin && (
+        <section class="carte">
+          <h2>Désistement</h2>
+          <button type="button" class="lien-bouton danger" onClick={supprimer}>
+            Supprimer cette inscription
+          </button>
         </section>
       )}
     </>

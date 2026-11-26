@@ -50,8 +50,52 @@ service cloud.firestore {
       allow write: if estAdmin();
     }
     match /config/{id} {
-      allow read: if true;
+      // config/inscription est publique ; config/app (numéro d'alerte…) pour les connectés.
+      allow read: if id == 'inscription' || estAdmin() || jeSuisMembre();
       allow write: if estAdmin();
+    }
+
+    // ----- Outils des équipes -----
+    function equipe(r) { return estAdmin() || aRole(r); }
+
+    // Repas : réglages, quantités et fournisseurs.
+    match /equipes/repas {
+      allow read, write: if equipe('repas');
+    }
+    match /fournisseurs/{id} {
+      allow read, write: if equipe('repas');
+    }
+    // Nombre par régime (sans noms), calculé par le script Google.
+    match /stats/{id} {
+      allow read: if equipe('repas') || aRole('logistique');
+      allow write: if false;
+    }
+    // Parcours : lu par la logistique, les chefs et les adjoints sécurité, écrit par la logistique.
+    match /parcours/{id} {
+      allow read: if equipe('logistique') || aRole('chef') || aRole('securite');
+      allow write: if equipe('logistique');
+    }
+    match /prevoyance/{id} {
+      allow read, write: if equipe('logistique');
+    }
+    // Un fil de discussion par équipe ; chacun signe ses messages.
+    match /fils/{nom}/messages/{id} {
+      function membreDuFil() { return estAdmin() || (nom != 'admins' && aRole(nom)); }
+      allow read: if membreDuFil();
+      allow create: if membreDuFil() && request.resource.data.auteur == request.auth.uid
+        && request.resource.data.texte is string && request.resource.data.texte.size() <= 2000;
+      allow delete: if estAdmin();
+    }
+    // Alertes accident : lancées par un adjoint sécurité, vues par la logistique.
+    match /alertes/{id} {
+      allow create: if aRole('securite') && request.resource.data.auteur == request.auth.uid;
+      allow read: if equipe('logistique') || (connecte() && resource.data.auteur == request.auth.uid);
+      allow update: if equipe('logistique') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['traitee']);
+    }
+    // Jeton de notification de chaque téléphone : écrit par son propriétaire, lu par le script seulement.
+    match /jetons/{uid} {
+      allow create, update: if connecte() && request.auth.uid == uid;
+      allow read: if false;
     }
 
     // Dossiers d'inscription (payeur, montant, paiement) : admins seulement.
@@ -69,6 +113,10 @@ service cloud.firestore {
       // Le pèlerin corrige ses propres réponses, sans toucher à son chapitre, ses rôles ni son paiement.
       allow update: if connecte() && request.auth.uid == id
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tel', 'email', 'reponses', 'volontaireChef']);
+      // Le chef nomme ou retire l'adjoint sécurité de son chapitre : seul le rôle « securite » peut changer.
+      allow update: if aRole('chef') && memeChapitre(resource.data.get('chapitre', null))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roles'])
+        && request.resource.data.roles.removeAll(['securite']).toSet() == resource.data.roles.removeAll(['securite']).toSet();
 
       // Données sensibles : santé, contact d'urgence, régime, référent des mineurs.
       match /prive/{doc} {

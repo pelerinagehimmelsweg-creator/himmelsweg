@@ -3,9 +3,10 @@
 
 import { CHAPITRES, CONTENUS, PERSONAS, dossiersExemple, membresExemple } from './exemples.js';
 import { droits } from './modele.js';
+import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v2';
+const CLE = 'himmelsweg-demo-v3';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -19,7 +20,38 @@ function lireEtat() {
   const liens = Object.fromEntries(membres.map((m) => [`demo-${m.id}`, m.id]));
   const config = structuredClone(CONFIG_DEPART);
   const dossiers = dossiersExemple(membres, config.tarifs);
-  return { membres, prive, liens, dossiers, contenus: CONTENUS, chapitres: CHAPITRES, questions: structuredClone(QUESTIONS_DEPART), config };
+  return {
+    membres,
+    prive,
+    liens,
+    dossiers,
+    contenus: CONTENUS,
+    chapitres: CHAPITRES,
+    questions: structuredClone(QUESTIONS_DEPART),
+    config,
+    configApp: { smsAlerte: '06 00 00 00 00' },
+    repas: { ...structuredClone(REPAS_CONFIG_DEPART), extras: 8 },
+    listes: {
+      fournisseurs: [
+        { id: 'f1', nom: 'Boulangerie Muller', tel: '03 88 00 00 01', livre: 'Pain, viennoiseries', quand: 'Samedi et dimanche, 6 h 30', prix: 'Environ 1 € la baguette' },
+        { id: 'f2', nom: 'Traiteur du Ried', tel: '03 89 00 00 02', livre: 'Plat chaud du samedi soir', quand: 'Samedi 18 h', prix: '9 € par personne' },
+      ],
+      parcours: structuredClone(PARCOURS_DEPART),
+      prevoyance: [
+        { id: 'p1', objet: 'Tentes de secours', quantite: '4', responsable: 'Damien', fait: true },
+        { id: 'p2', objet: 'Trousses de premiers secours', quantite: '1 par chapitre', responsable: 'Damien', fait: false },
+        { id: 'p3', objet: 'Camionnette pour les gros sacs', quantite: '1', responsable: 'Louis', fait: false },
+      ],
+    },
+    fils: {
+      logistique: [{ id: 'x1', auteur: 'm-H4', nom: 'Damien Weber', texte: 'Qui peut récupérer la camionnette jeudi soir ?', le: '2027-05-01T18:00:00Z' }],
+      repas: [{ id: 'x2', auteur: 'm-F4', nom: 'Domitille Hartmann', texte: 'J’ai appelé la boulangerie, c’est bon pour samedi.', le: '2027-04-28T09:30:00Z' }],
+      chef: [],
+      securite: [],
+      admins: [],
+    },
+    alertes: [],
+  };
 }
 
 export function creerDemo() {
@@ -77,6 +109,18 @@ export function creerDemo() {
   };
   const exigerAdmin = () => {
     if (!session()?.estAdmin) throw new Error('Réservé aux administrateurs');
+  };
+  const aRole = (...r) => {
+    const s = session();
+    return !!s && (s.estAdmin || r.some((x) => s.roles?.includes(x)));
+  };
+  const exigerRole = (...r) => {
+    if (!aRole(...r)) throw new Error('Réservé à l’équipe concernée.');
+  };
+  const DROITS_LISTES = {
+    fournisseurs: { lire: ['repas'], ecrire: ['repas'] },
+    parcours: { lire: ['logistique', 'chef', 'securite'], ecrire: ['logistique'] },
+    prevoyance: { lire: ['logistique'], ecrire: ['logistique'] },
   };
   const lienDe = (id) => Object.keys(etat.liens).find((k) => etat.liens[k] === id);
   const regler = (ref, statut, extra = {}) => {
@@ -219,6 +263,103 @@ export function creerDemo() {
     },
     async simulerPaiement(ref) {
       regler(ref, 'paye');
+    },
+
+    // Outils des équipes
+    ecouterConfigApp: (cb) => ecouter(() => (session() ? etat.configApp : {}), cb),
+    async enregistrerConfigApp(c) {
+      exigerAdmin();
+      etat.configApp = c;
+      sauver();
+    },
+    ecouterRepas: (cb) => ecouter(() => (aRole('repas') ? etat.repas : null), cb),
+    async enregistrerRepas(c) {
+      exigerRole('repas');
+      etat.repas = c;
+      sauver();
+    },
+    ecouterStatsRepas: (cb) =>
+      ecouter(() => (aRole('repas', 'logistique') ? { ...compterRegimes(etat.membres, etat.prive), maj: new Date().toISOString() } : null), cb),
+    ecouterListe: (nom, cb) => ecouter(() => (aRole(...DROITS_LISTES[nom].lire) ? [...etat.listes[nom]] : []), cb),
+    async enregistrerElement(nom, el) {
+      exigerRole(...DROITS_LISTES[nom].ecrire);
+      const id = el.id || `${nom[0]}-${Date.now().toString(36)}`;
+      etat.listes[nom] = [...etat.listes[nom].filter((x) => x.id !== id), { ...el, id }];
+      sauver();
+      return id;
+    },
+    async supprimerElement(nom, id) {
+      exigerRole(...DROITS_LISTES[nom].ecrire);
+      etat.listes[nom] = etat.listes[nom].filter((x) => x.id !== id);
+      sauver();
+    },
+    ecouterFil: (equipe, cb) =>
+      ecouter(() => {
+        const s = session();
+        const ok = s && (s.estAdmin || (equipe !== 'admins' && s.roles?.includes(equipe)));
+        return ok ? [...etat.fils[equipe]].sort((a, b) => a.le.localeCompare(b.le)) : [];
+      }, cb),
+    async ecrireFil(equipe, texte) {
+      const s = session();
+      if (!s || !(s.estAdmin || (equipe !== 'admins' && s.roles?.includes(equipe)))) throw new Error('Non autorisé');
+      etat.fils[equipe] = [...etat.fils[equipe], { id: `x-${Date.now()}`, auteur: s.id, nom: `${s.prenom} ${s.nom}`.trim(), texte, le: new Date().toISOString() }];
+      sauver();
+    },
+    async lancerAlerte({ message, position }) {
+      exigerRole('securite');
+      const s = session();
+      const chapitre = etat.chapitres.find((c) => c.id === s.chapitre)?.nom ?? '';
+      const alerte = { id: `al-${Date.now()}`, auteur: s.id, nom: `${s.prenom} ${s.nom}`.trim(), chapitre, message, position, le: new Date().toISOString(), traitee: false };
+      etat.alertes = [alerte, ...etat.alertes];
+      sauver();
+      const prevenus = etat.membres.filter((m) => m.roles?.includes('logistique')).length;
+      return { texte: texteAlerte(alerte), prevenus };
+    },
+    ecouterAlertes: (cb) =>
+      ecouter(() => {
+        const s = session();
+        if (!s) return [];
+        return aRole('logistique') ? [...etat.alertes] : etat.alertes.filter((a) => a.auteur === s.id);
+      }, cb),
+    async traiterAlerte(id) {
+      exigerRole('logistique');
+      etat.alertes = etat.alertes.map((a) => (a.id === id ? { ...a, traitee: true } : a));
+      sauver();
+    },
+    async nommerAdjoint(id, oui) {
+      const s = session();
+      const m = etat.membres.find((x) => x.id === id);
+      if (!s?.roles?.includes('chef') || !s.chapitre || m?.chapitre !== s.chapitre) throw new Error('Réservé au chef de ce chapitre.');
+      const roles = new Set(m.roles ?? []);
+      oui ? roles.add('securite') : roles.delete('securite');
+      etat.membres = etat.membres.map((x) => (x.id === id ? { ...x, roles: [...roles] } : x));
+      sauver();
+    },
+    notifications: 'demo',
+    async activerNotifications() {
+      return 'Notifications activées (démo).';
+    },
+    async envoyerNotification({ cible, valeur }) {
+      exigerAdmin();
+      const n = etat.membres.filter(
+        (m) => m.statut !== 'en_attente' && (cible === 'tous' || (cible === 'chapitre' && m.chapitre === valeur) || (cible === 'role' && m.roles?.includes(valeur))),
+      ).length;
+      return { envoyes: n, demo: true };
+    },
+    async supprimerMembre(id) {
+      exigerAdmin();
+      etat.membres = etat.membres.filter((m) => m.id !== id);
+      delete etat.prive[id];
+      Object.keys(etat.liens).forEach((k) => etat.liens[k] === id && delete etat.liens[k]);
+      etat.dossiers = etat.dossiers.map((d) => (d.membres.includes(id) ? { ...d, membres: d.membres.filter((x) => x !== id) } : d));
+      sauver();
+    },
+    async annulerDossier(ref) {
+      exigerAdmin();
+      const d = etat.dossiers.find((x) => x.id === ref);
+      for (const id of d?.membres ?? []) await this.supprimerMembre(id);
+      etat.dossiers = etat.dossiers.map((x) => (x.id === ref ? { ...x, statut: 'annule' } : x));
+      sauver();
     },
 
     ecouterDossiers: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.dossiers] : []), cb),
