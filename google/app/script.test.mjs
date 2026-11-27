@@ -476,7 +476,7 @@ test('alerte accident : seule la logistique est prévenue, par celui qui l’a l
   const r = s.appeler({ action: 'notifier', idToken: 'jeton-secu', cible: 'alerte', valeur: 'al1' });
   assert.equal(r.envoyes, 1);
   assert.deepEqual(s.envoisFcm.map((m) => m.token), ['tok-logi']);
-  assert.match(s.envoisFcm[0].webpush.notification.body, /Charles Klein.*Cheville tordue.*maps\.google\.com\/\?q=48\.2,7\.4/);
+  assert.match(s.envoisFcm[0].data.texte, /Charles Klein.*Cheville tordue.*maps\.google\.com\/\?q=48\.2,7\.4/);
   assert.ok(s.appeler({ action: 'notifier', idToken: 'jeton-pel1', cible: 'alerte', valeur: 'al1' }).erreur);
   assert.ok(s.appeler({ action: 'notifier', idToken: 'faux', cible: 'alerte', valeur: 'al1' }).erreur);
 });
@@ -648,7 +648,7 @@ test('questionnaire de fin : annonce à l’ouverture, relance 3 jours après au
   t = Date.parse('2027-05-09T17:05:00Z');
   s.suivre();
   assert.deepEqual(s.envoisFcm.map((m) => m.token).sort(), ['tok-logi', 'tok-pel1', 'tok-secu']);
-  assert.equal(s.envoisFcm[0].webpush.notification.title, 'Votre avis compte');
+  assert.deepEqual({ ...s.envoisFcm[0].data, id: 'x' }, { id: 'x', modele: 'merci', titre: 'Votre avis compte', texte: 'Merci pour ces trois jours ! Dites-nous en 3 minutes ce qui vous a plu.', lien: '/#/bilan', bouton: 'Répondre' });
   s.envoisFcm.length = 0;
   s.suivre();
   assert.equal(s.envoisFcm.length, 0); // une seule annonce
@@ -666,4 +666,43 @@ test('questionnaire de fin fermé par les admins : aucune notification', () => {
   const s = charger({ base: { ...EQUIPE, 'config/bilan': { ouverture: 'ferme' } }, maintenant: () => Date.parse('2027-05-10T08:00:00Z') });
   s.suivre();
   assert.equal(s.envoisFcm.length, 0);
+});
+
+test('notifications : modèle choisi, données seules (le téléphone les met en forme), essai sur son propre téléphone', () => {
+  const s = charger({ base: { ...EQUIPE, 'jetons/google-uid': { token: 'tok-admin' } }, sessions: SESSIONS });
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'chapitre', valeur: 'A', titre: 'Rendez-vous à 7 h 30', texte: 'Messe à Ribeauvillé', modele: 'rendezvous' });
+  const m = s.envoisFcm[0];
+  assert.equal(m.notification, undefined);
+  assert.equal(m.webpush.notification, undefined);
+  assert.equal(m.data.modele, 'rendezvous');
+  assert.equal(m.data.titre, 'Rendez-vous à 7 h 30');
+  assert.ok(Object.values(m.data).every((v) => typeof v === 'string'));
+  s.envoisFcm.length = 0;
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'tous', titre: 'x', texte: 'y', modele: '<script>' });
+  assert.ok(s.envoisFcm.every((x) => x.data.modele === 'annonce'));
+  s.envoisFcm.length = 0;
+  const essai = s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'moi', titre: 'Essai', texte: 'Rendu', modele: 'priere' });
+  assert.deepEqual(s.envoisFcm.map((x) => x.token), ['tok-admin']);
+  assert.equal(essai.envoyes, 1);
+});
+
+test('notifications programmées : envoyées une fois quand l’heure est passée, pas avant', () => {
+  let t = Date.parse('2027-05-07T20:00:00Z');
+  const s = charger({
+    base: {
+      ...EQUIPE,
+      'programmees/p1': { cible: 'chapitre', valeur: 'A', titre: 'Réveil', texte: 'Debout !', modele: 'rendezvous', le: '2027-05-08T04:30:00Z' },
+      'programmees/p2': { cible: 'tous', titre: 'Plus tard', texte: 'z', modele: 'annonce', le: '2027-05-09T10:00:00Z' },
+    },
+    maintenant: () => t,
+  });
+  s.suivre();
+  assert.equal(s.envoisFcm.length, 0);
+  t = Date.parse('2027-05-08T04:40:00Z');
+  s.suivre();
+  s.suivre();
+  assert.deepEqual(s.envoisFcm.map((x) => x.data.titre), ['Réveil', 'Réveil', 'Réveil']); // chapitre A, une seule fois
+  assert.equal(s.lire('programmees/p1').envoyes, 3);
+  assert.ok(s.lire('programmees/p1').envoyee);
+  assert.equal(s.lire('programmees/p2').envoyee, undefined);
 });

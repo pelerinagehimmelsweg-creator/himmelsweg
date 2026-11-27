@@ -423,3 +423,46 @@ label.formulaire textarea { display: block; width: 100%; margin-top: .25rem; pad
 .temoignage-admin footer small { font-weight: 400; color: var(--gris); }
 .temoignage-admin footer .actions { margin: 0; }
 .temoignage-admin.retenu { border-left: 4px solid #e0a419; }
+
+/* Notifications : bannière dans l'app, modèles et aperçu */
+.banniere-notif { position: fixed; z-index: 60; top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%); width: min(94vw, 460px); background: #fffdf7; border: 1.5px solid #e3c766; border-radius: 18px; box-shadow: 0 14px 40px rgba(60,40,10,.3); overflow: hidden; animation: bn-entree .45s cubic-bezier(.2,.9,.3,1.2); }
+.banniere-notif.apercu { position: relative; z-index: auto; top: auto; left: auto; transform: none; width: 100%; animation: none; }
+@keyframes bn-entree { from { opacity: 0; transform: translate(-50%, -30px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.bn-photo { aspect-ratio: 2 / 1; background-size: cover; background-position: center; }
+.bn-fermer { position: absolute; top: 6px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(0,0,0,.35); color: #fff; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.bn-corps { padding: .7rem .9rem .9rem; }
+.bn-eti { display: block; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a8740c; }
+.bn-titre { display: block; font-family: var(--titre); color: var(--rouge-fonce); font-size: 1.2rem; margin: .15rem 0 .3rem; }
+.bn-corps p { margin: 0 0 .6rem; }
+.modele-important .bn-eti { color: var(--rouge); }
+.modeles-notif { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.formulaire .modeles-notif label, .modeles-notif label { display: block; margin: 0; border: 2px solid transparent; border-radius: 12px; overflow: hidden; background: var(--blanc); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.modeles-notif label.choisi { border-color: var(--rouge); }
+.modeles-notif input { position: absolute; opacity: 0; pointer-events: none; }
+.modeles-notif label:has(input:focus-visible) { outline: 3px solid #e9a99f; }
+.mn-photo { display: block; height: 52px; background-size: cover; background-position: center; }
+.mn-nom { display: block; padding: .3rem .4rem; font-size: .85rem; font-weight: 700; }
+.apercu-notif { margin: .4rem 0 1.2rem; }
+.ecran-apercu { position: relative; border-radius: 22px; padding: 1.4rem .7rem 1rem; min-height: 300px; background-color: #2a2420; background-size: cover; background-position: center; overflow: hidden; }
+.ecran-apercu::before { content: ""; position: absolute; inset: 0; background: rgba(20,16,14,.55); backdrop-filter: blur(3px); }
+.ecran-apercu.clair { background: var(--creme); border: 1px solid var(--creme-fonce); }
+.ecran-apercu.clair::before { display: none; }
+.ecran-apercu > * { position: relative; }
+.notif-android { background: rgba(250,248,243,.97); border-radius: 20px; padding: .7rem .8rem .5rem; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.notif-android > strong { display: block; }
+.notif-android > span { display: block; font-size: .95rem; color: #3b332d; }
+.na-tete { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--gris); margin-bottom: .2rem; }
+.na-tete img { width: 20px; height: 20px; padding: 3px; border-radius: 50%; background: var(--rouge); }
+.na-photo { aspect-ratio: 2 / 1; margin: .5rem 0 .2rem; border-radius: 12px; background-size: cover; background-position: center; }
+.na-actions { display: flex; gap: 1.3rem; padding: .4rem .2rem .2rem; font-weight: 700; font-size: .85rem; color: var(--rouge); text-transform: uppercase; }
+.notif-ios { display: flex; gap: .6rem; background: rgba(245,242,236,.88); backdrop-filter: blur(16px); border-radius: 18px; padding: .65rem .75rem; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.notif-ios img { width: 38px; height: 38px; border-radius: 9px; }
+.notif-ios div { flex: 1; }
+.notif-ios small { float: right; color: var(--gris); font-size: .75rem; }
+.notif-ios strong, .notif-ios span { display: block; font-size: .95rem; }
+.apercu-note { color: #fff; font-size: .85rem; text-align: center; margin: .8rem 0 0; }
+.programmees ul { list-style: none; margin: 0; padding: 0; }
+.programmees li { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--creme-fonce); }
+.programmees li:last-child { border-bottom: 0; }
+.programmees small { display: block; color: var(--gris); }
+.formulaire input[type="datetime-local"] { margin-top: .5rem; }

@@ -187,6 +187,11 @@ service cloud.firestore {
       allow create: if jeSuisMembre() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['jour']);
     }
 
+    // Notifications programmées : préparées par les admins, envoyées à l'heure par le script Google.
+    match /programmees/{id} {
+      allow read, write: if estAdmin();
+    }
+
     match /{autre=**} {
       allow read, write: if false;
     }

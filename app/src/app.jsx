@@ -15,6 +15,7 @@ import { AdminBilan, Bilan } from './ecrans/bilan.jsx';
 import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
+import { BanniereNotification } from './composants/banniere.jsx';
 
 // Écrans chargés seulement à leur ouverture : l'éditeur du site (admins) et la carte.
 function aLaDemande(charger) {
@@ -121,6 +122,7 @@ export function App({ donnees }) {
 
   return (
     <div class="coque">
+      <BanniereNotification />
       <header class="entete">
         <a class="marque" href="#/">
           <img src={logo} alt="" width="40" height="40" />

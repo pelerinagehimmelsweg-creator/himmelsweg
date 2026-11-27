@@ -43,7 +43,7 @@ export function Moi({ donnees, session }) {
         </section>
       )}
 
-      {!session.estAdmin && <ActiverNotifications donnees={donnees} />}
+      <ActiverNotifications donnees={donnees} />
 
       {d.admin && (
         <section class="carte">

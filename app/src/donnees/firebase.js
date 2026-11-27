@@ -44,6 +44,14 @@ export function creerFirebase(config, urlScript, cleVapid) {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
 
+  // Notifications déjà autorisées : on met à jour le service worker qui les affiche (nouveaux modèles).
+  if (cleVapid && typeof Notification !== 'undefined' && Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' })
+      .then((r) => r.update())
+      .catch(() => {});
+  }
+
   let session; // undefined = on attend la réponse de Firebase
   const abonnes = new Set();
   const publier = (s) => {
@@ -328,9 +336,13 @@ export function creerFirebase(config, urlScript, cleVapid) {
     siteEcrire: async (chemin, contenu, sha) => script('site', { op: 'ecrire', idToken: await auth.currentUser.getIdToken(), chemin, contenu, sha }),
     sitePhoto: async (chemin, base64) => script('site', { op: 'photo', idToken: await auth.currentUser.getIdToken(), chemin, base64 }),
     siteSupprimer: async (chemin, sha) => script('site', { op: 'supprimer', idToken: await auth.currentUser.getIdToken(), chemin, sha }),
-    async envoyerNotification({ cible, valeur, titre, texte }) {
-      return script('notifier', { idToken: await auth.currentUser.getIdToken(), cible, valeur, titre, texte });
+    async envoyerNotification({ cible, valeur, titre, texte, modele }) {
+      return script('notifier', { idToken: await auth.currentUser.getIdToken(), cible, valeur, titre, texte, modele });
     },
+    // Notifications programmées : rangées ici par les admins, envoyées par le script Google (toutes les 15 min).
+    ecouterProgrammees: (cb) => liste(collection(db, 'programmees'), cb),
+    programmerNotification: (n) => addDoc(collection(db, 'programmees'), { ...n, par: session?.email ?? '', cree: new Date().toISOString() }),
+    annulerProgrammee: (id) => deleteDoc(doc(db, 'programmees', id)),
     // Désistement ou fiche de test : la fiche, ses infos protégées et son lien disparaissent.
     async supprimerMembre(id) {
       const cle = (await getDoc(doc(db, 'membres', id, 'admin', 'lien'))).data()?.cle;

@@ -280,3 +280,11 @@ test('questionnaire de fin : une réponse par participant, anonyme possible, lue
   await assertSucceeds(getDoc(doc(membre('pelB'), 'config/bilan')));
   await assertFails(setDoc(doc(membre('pelB'), 'config/bilan'), { ouverture: 'ouvert' }));
 });
+
+test('notifications programmées : réservées aux admins', async () => {
+  await assertSucceeds(setDoc(doc(admin(), 'programmees/p1'), { titre: 'Réveil', le: '2027-05-08T04:30:00Z' }));
+  await assertSucceeds(getDocs(collection(admin(), 'programmees')));
+  await assertFails(getDocs(collection(membre('chefA'), 'programmees')));
+  await assertFails(setDoc(doc(membre('logi'), 'programmees/p2'), { titre: 'x' }));
+  await assertSucceeds(deleteDoc(doc(admin(), 'programmees/p1')));
+});

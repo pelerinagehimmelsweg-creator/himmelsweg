@@ -29,7 +29,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,woff2}', 'notifications/*.jpg'],
         navigateFallback: '/index.html',
         // Fond de carte : chaque morceau affiché est gardé pour être revu sans réseau
         // (pas de téléchargement en masse, comme le demande OpenStreetMap).
