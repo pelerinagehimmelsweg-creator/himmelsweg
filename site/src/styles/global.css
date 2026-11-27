@@ -169,3 +169,21 @@ p { margin: 0 0 1em; }
 .widgets { margin-top: 2rem; display: grid; gap: 2rem; }
 .widget-bloc { scroll-margin-top: 100px; }
 .section-rouge a:not(.bouton) { color: var(--creme); }
+
+/* Apparitions douces (script dans layouts/Base.astro) */
+.ap { opacity: 0; transform: translateY(18px); transition: opacity .8s ease var(--decalage, 0ms), transform .8s cubic-bezier(.2, .7, .3, 1) var(--decalage, 0ms); }
+.ap.vu { opacity: 1; transform: none; }
+.bouton-ligne { background: transparent; color: var(--rouge); border-color: var(--rouge); }
+.bouton-ligne:hover { background: var(--rouge); color: var(--blanc); }
+
+/* Programme : étapes à côté de la carte du chemin */
+.etapes-carte.avec-carte { display: grid; grid-template-columns: 1fr minmax(260px, 380px); gap: 2rem; align-items: start; }
+.etapes-plan { position: sticky; top: 6rem; }
+.avec-carte .etape.vu:not(.etape-lue) { opacity: .55; }
+.avec-carte .etape-lue { box-shadow: 0 6px 22px rgba(179, 45, 36, .14); }
+@media (max-width: 800px) {
+  .etapes-carte.avec-carte { grid-template-columns: 1fr; }
+  .etapes-plan { order: -1; position: sticky; top: 0; z-index: 2; background: var(--creme); padding: .3rem 0; }
+  .etapes-carte .etapes-plan .carte-chemin { max-height: 30vh; }
+  .etapes-plan { box-shadow: 0 8px 12px -10px rgba(35, 28, 24, .25); }
+}

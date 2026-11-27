@@ -6,6 +6,7 @@ import Base from '../layouts/Base.astro';
 import TitrePage from '../components/TitrePage.astro';
 import WidgetHelloAsso from '../components/WidgetHelloAsso.astro';
 import FormulaireContact from '../components/FormulaireContact.astro';
+import CarteChemin from '../components/CarteChemin.astro';
 import { html } from '../lib/donnees';
 
 export async function getStaticPaths() {
@@ -44,14 +45,21 @@ const ancre = (t?: string | null) => (t ? t.toLowerCase().normalize('NFD').repla
       )}
 
       {d.etapes && d.etapes.length > 0 && (
-        <ol class="etapes">
-          {d.etapes.map((e) => (
-            <li class="etape">
-              <div class="etape-jour">{e.jour}<span>{e.date?.split(' ')[0]}</span>{e.date?.split(' ').slice(1).join(' ')}</div>
-              <div><h3>{e.titre}</h3>{e.detail && <p>{e.detail}</p>}</div>
-            </li>
-          ))}
-        </ol>
+        <div class:list={['etapes-carte', { 'avec-carte': page.id === 'programme' }]}>
+          <ol class="etapes">
+            {d.etapes.map((e, k) => (
+              <li class="etape" data-jour={k}>
+                <div class="etape-jour">{e.jour}<span>{e.date?.split(' ')[0]}</span>{e.date?.split(' ').slice(1).join(' ')}</div>
+                <div><h3>{e.titre}</h3>{e.detail && <p>{e.detail}</p>}</div>
+              </li>
+            ))}
+          </ol>
+          {page.id === 'programme' && (
+            <div class="etapes-plan">
+              <CarteChemin mode="programme" dates={d.etapes.map((e) => `${e.jour} ${e.date ?? ''}`.trim())} />
+            </div>
+          )}
+        </div>
       )}
 
       {d.faq && d.faq.length > 0 && (
@@ -83,3 +91,24 @@ const ancre = (t?: string | null) => (t ? t.toLowerCase().normalize('NFD').repla
     </div>
   </section>
 </Base>
+
+<script>
+  // Programme : la journée qu'on lit s'allume sur la carte.
+  const plan = document.querySelector<SVGElement>('.etapes-carte .carte-chemin');
+  const jours = document.querySelectorAll<HTMLElement>('.etapes-carte .etape');
+  if (plan && jours.length) {
+    plan.dataset.jour = '0';
+    const allumer = (k: string) => {
+      plan.dataset.jour = k;
+      jours.forEach((j) => j.classList.toggle('etape-lue', j.dataset.jour === k));
+    };
+    const io = new IntersectionObserver(
+      (entrees) => entrees.forEach((e) => e.isIntersecting && allumer((e.target as HTMLElement).dataset.jour ?? '0')),
+      { rootMargin: '-45% 0px -45% 0px' },
+    );
+    jours.forEach((j) => {
+      io.observe(j);
+      j.addEventListener('mouseenter', () => allumer(j.dataset.jour ?? '0'));
+    });
+  }
+</script>
