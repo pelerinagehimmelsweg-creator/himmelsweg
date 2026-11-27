@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
 import { ActiverNotifications, ReglageAlerte } from './equipe.jsx';
+import { ReglageSoutien, Soutien } from './soutien.jsx';
 import { LIENS, droits, nomRole } from '../donnees/modele.js';
 import { enTexte, erreursPersonne, estVisible, questionsTriees, reponsesDe, versFiche } from '../donnees/questionnaire.js';
 
@@ -29,17 +30,7 @@ export function Moi({ donnees, session }) {
         {session.chapitre && ` · chapitre ${chapitres.find((c) => c.id === session.chapitre)?.nom ?? ''}`}
       </p>
 
-      <section class="carte">
-        <h2>Soutenir le pèlerinage</h2>
-        <div class="actions">
-          <a class="bouton" href={LIENS.boutique} target="_blank" rel="noopener">
-            Boutique
-          </a>
-          <a class="bouton secondaire" href={LIENS.don} target="_blank" rel="noopener">
-            Faire un don
-          </a>
-        </div>
-      </section>
+      <Soutien donnees={donnees} forme="moi" />
 
       {roles.length > 0 && (
         <section class="carte">
@@ -77,6 +68,7 @@ export function Moi({ donnees, session }) {
       )}
 
       {d.admin && <ReglageAlerte donnees={donnees} />}
+      {d.admin && <ReglageSoutien donnees={donnees} />}
 
       {d.admin && (
         <section class="carte">

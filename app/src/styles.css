@@ -373,4 +373,10 @@ article.carte { scroll-margin-top: 1rem; }
 .visionneuse-liens a, .visionneuse-liens .lien-bouton { color: #f3d77a; }
 .visionneuse-fleche { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 1.8rem; line-height: 1; cursor: pointer; }
 .visionneuse-fleche[disabled] { opacity: .25; cursor: default; }
-a.lien-encart { text-decoration: none; cursor: pointer; }
+a.lien-encart { text-decoration: none; cursor: pointer; flex-wrap: nowrap; }
+
+/* Soutenir le pèlerinage */
+.soutien-merci { border: 2px solid var(--rouge); background: #fff8f0; }
+.soutien-merci .actions .bouton { flex: 1; }
+.helloasso { display: block; width: 100%; border: 0; border-radius: var(--rayon); background: var(--blanc); margin-bottom: .6rem; }
+.lien-retour { display: inline-block; margin-bottom: .4rem; text-decoration: none; font-weight: 600; }
