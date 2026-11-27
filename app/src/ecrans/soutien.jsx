@@ -167,7 +167,7 @@ export function ReglageSoutien({ donnees }) {
 /** Mot de l'invitation, choisi par les admins (un texte pour les pèlerines, un pour les pèlerins). */
 export const motInvitation = (config, groupe) =>
   (groupe === "H" ? config?.motInvitationH : config?.motInvitationF)?.trim() ||
-  `Les 7, 8 et 9 mai 2027, je pars à pied sur le chemin du Ciel, de Scherwiller à Colmar. Je serais ${groupe === "H" ? "heureux" : "heureuse"} que tu viennes.`;
+  `Les 7, 8 et 9 mai 2027, je pars à pied sur le chemin du Ciel, de Scherwiller à Colmar. Je serais ${groupe === "H" ? "heureux" : "heureuse"} que vous veniez.`;
 
 export function ReglageInvitation({ donnees }) {
   const config = useAbonnement(

@@ -27,9 +27,9 @@ export function lienInvitation(session, mode) {
 }
 
 export const messageInvitation = (prenom, lien) =>
-  `${prenom ? `${prenom} t’invite` : "Je t’invite"} sur le chemin du Ciel 🙏\n` +
+  `${prenom ? `${prenom} vous invite` : "Je vous invite"} sur le chemin du Ciel 🙏\n` +
   `Les 7, 8 et 9 mai 2027, trois jours à pied de Scherwiller à Colmar avec le pèlerinage Himmelsweg.\n` +
-  `Rejoins-moi : ${lien}`;
+  `Rejoignez-moi : ${lien}`;
 
 const charger = (src) =>
   new Promise((ok, ko) => {
@@ -234,10 +234,10 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
   apparait(4.5, () => {
     c.fillStyle = "#fff";
     c.font = sans(700, 44);
-    c.fillText("Rejoins-moi", 360, yQr + 70);
+    c.fillText("Rejoignez-moi", 360, yQr + 70);
     c.fillStyle = "#fff";
     c.font = sans(400, 34);
-    c.fillText("Scanne ou touche le lien", 360, yQr + 122);
+    c.fillText("Scannez ou touchez le lien", 360, yQr + 122);
     c.fillText("Inscription en 5 minutes", 360, yQr + 168);
   });
 
@@ -256,13 +256,16 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
     }
   }, 0.9);
 
-  const titre = ["Trois jours.", "Un chemin.", "Et toi ?"];
+  const titre = ["Trois jours.", "Un pèlerinage.", "Et vous ?"];
   y -= 80 + 104 * (titre.length - 1);
+  // Taille ajustée pour que la plus longue ligne tienne dans la largeur.
+  c.font = "700 96px Cinzel";
+  const taille = Math.min(96, Math.floor((96 * (L - 160)) / Math.max(...titre.map((l) => c.measureText(l).width))));
   titre.forEach((l, i) => {
     apparait(1.1 + i * 0.55, () => {
-      c.font = "700 96px Cinzel";
+      c.font = `700 ${taille}px Cinzel`;
       if (i === 2) {
-        // « Et toi ? » en blanc sur un bandeau rouge du blason.
+        // « Et vous ? » en blanc sur un bandeau rouge du blason.
         const lt = c.measureText(l).width;
         c.fillStyle = "#b32d24";
         arrondi(c, 56, y + i * 104 - 84, lt + 48, 108, 14);
@@ -522,7 +525,7 @@ export function Inviter({ donnees, session }) {
             </a>
             <a
               class="bouton secondaire"
-              href={`mailto:?subject=${encodeURIComponent("Viens marcher avec moi vers le Ciel")}&body=${texte}`}
+              href={`mailto:?subject=${encodeURIComponent("Venez marcher avec moi vers le Ciel")}&body=${texte}`}
             >
               E-mail
             </a>
