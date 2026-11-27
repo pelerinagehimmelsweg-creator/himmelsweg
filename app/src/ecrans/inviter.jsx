@@ -108,13 +108,20 @@ const longueur = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] -
 const JOURS_COURTS = ["Ven. 7 mai", "Sam. 8 mai", "Dim. 9 mai", ""];
 
 /** Le chemin en gros plan dans (l × h) : tracé rouge, étapes, noms et jours. kt : part du tracé dessinée. */
-function cheminGrosPlan(c, l, h, kt, sans, { ml = 80, mr = 190, my = 60, taille = 30 } = {}) {
+function cheminGrosPlan(c, l, h, kt, sans, { ml = 80, mr = 190, my = 60, taille = 30, photo = false } = {}) {
   const proj = projectionChemin(l, h, ml, mr, my);
   const pts = CHEMIN.map(proj);
   const lg = longueur(pts);
   c.lineJoin = "round";
   c.lineCap = "round";
   c.setLineDash([lg * kt, lg]);
+  if (photo) {
+    // Sur la photo : un liseré crème autour du tracé pour qu'il se détache.
+    c.strokeStyle = CREME;
+    c.lineWidth = 17;
+    trace(c, pts);
+    c.stroke();
+  }
   c.strokeStyle = ROUGE;
   c.lineWidth = 9;
   trace(c, pts);
@@ -150,10 +157,14 @@ function cheminGrosPlan(c, l, h, kt, sans, { ml = 80, mr = 190, my = 60, taille 
     c.textAlign = "left";
     const tx = dessous ? x - 14 : x + 26;
     const ty = dessous ? y + 66 : y + 8;
-    c.fillStyle = ENCRE;
+    if (photo) {
+      c.shadowColor = "rgba(0,0,0,.95)";
+      c.shadowBlur = 14;
+    }
+    c.fillStyle = photo ? "#fff" : ENCRE;
     c.font = sans(700, taille);
     c.fillText(e.nom, tx, ty);
-    c.fillStyle = ROUGE;
+    c.fillStyle = photo ? "#f6f1e4" : ROUGE;
     c.font = sans(600, taille * 0.78);
     c.fillText(JOURS_COURTS[k], tx, ty + taille * 1.05);
     c.restore();
@@ -197,27 +208,21 @@ function dessinerCarte(c, t, sans) {
   const kt = fixe ? 1 : avance(t, 1.5, 1.8);
   if (kc <= 0) return;
   c.save();
-  // Carte crème arrondie, le chemin en gros plan ; l'Alsace en petit dans le coin pour situer.
-  const l = 440;
-  const h = 620;
-  const x = L - 80 - l;
-  const y = 270;
+  // Le chemin en gros plan, tracé directement sur la photo ; l'Alsace en petit au-dessus pour situer.
+  const l = 380;
+  const h = 560;
   c.globalAlpha = kc;
-  c.translate(x, y + (1 - kc) * 30);
-  c.shadowColor = "rgba(0,0,0,.35)";
-  c.shadowBlur = 24;
-  c.fillStyle = CREME;
-  arrondi(c, 0, 0, l, h, 28);
-  c.fill();
-  c.shadowBlur = 0;
+  c.translate(L - 70 - l, 260);
   c.save();
-  c.translate(22, 22);
-  c.strokeStyle = "#b9ad97";
+  c.translate(l - 100, 0);
+  c.shadowColor = "rgba(0,0,0,.4)";
+  c.shadowBlur = 8;
+  c.strokeStyle = CREME;
   c.lineWidth = 2;
-  petiteAlsace(c, 70, "#f3ece0", 1, 1, 4);
+  petiteAlsace(c, 64, "rgba(255,253,248,.85)", 1, 1, 4);
   c.restore();
   c.globalAlpha = 1;
-  cheminGrosPlan(c, l, h, kt, sans, { ml: 90, my: 100 });
+  cheminGrosPlan(c, l, h, kt, sans, { ml: 90, mr: 180, my: 90, photo: true });
   c.restore();
 }
 
