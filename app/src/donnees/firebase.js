@@ -19,6 +19,8 @@ import {
   getDoc,
   getDocs,
   initializeFirestore,
+  limit,
+  orderBy,
   onSnapshot,
   persistentLocalCache,
   persistentMultipleTabManager,
@@ -107,9 +109,14 @@ export function creerFirebase(config, urlScript, cleVapid) {
         body: JSON.stringify({ action, ...donnees }),
       });
     } catch {
-      throw new Error('Pas de connexion internet. Réessayez quand le réseau revient.');
+      throw Object.assign(new Error('Pas de connexion internet. Réessayez quand le réseau revient.'), { reseau: true });
     }
-    const json = await rep.json();
+    let json;
+    try {
+      json = await rep.json();
+    } catch {
+      throw Object.assign(new Error('Le service est momentanément indisponible. Réessayez dans quelques minutes.'), { reseau: true });
+    }
     if (json.erreur) {
       const e = new Error(json.erreur);
       e.details = json.details;
@@ -273,6 +280,19 @@ export function creerFirebase(config, urlScript, cleVapid) {
       return 'Notifications activées sur ce téléphone.';
     },
     // Site himmelsweg.fr : lu et enregistré sur GitHub par le script Google (admins seulement).
+    // Photos : envoyées au script Google, qui les range dans le Drive et crée la fiche photos/{id}.
+    envoyerPhoto: async (p) => script('photo', { idToken: await auth.currentUser.getIdToken(), ...p }),
+    trierPhoto: async (id, statut) => script('photoTri', { idToken: await auth.currentUser.getIdToken(), id, statut }),
+    supprimerPhoto: async (id) => script('photoSupprimer', { idToken: await auth.currentUser.getIdToken(), id }),
+    // quoi : 'galerie' (photos gardées), 'a_trier' (admins), 'miennes'. Les plus récentes d'abord.
+    ecouterPhotos: (quoi, n, cb) => {
+      const c = collection(db, 'photos');
+      const q =
+        quoi === 'miennes'
+          ? query(c, where('auteur', '==', auth.currentUser?.uid ?? '-'))
+          : query(c, where('statut', '==', quoi === 'galerie' ? 'publiee' : 'a_trier'), orderBy(documentId()), limit(n));
+      return liste(q, (l) => cb(l.sort((a, b) => a.id.localeCompare(b.id)).slice(0, n)));
+    },
     siteLire: async () => script('site', { op: 'lire', idToken: await auth.currentUser.getIdToken() }),
     siteEcrire: async (chemin, contenu, sha) => script('site', { op: 'ecrire', idToken: await auth.currentUser.getIdToken(), chemin, contenu, sha }),
     sitePhoto: async (chemin, base64) => script('site', { op: 'photo', idToken: await auth.currentUser.getIdToken(), chemin, base64 }),

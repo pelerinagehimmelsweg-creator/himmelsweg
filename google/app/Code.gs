@@ -9,7 +9,8 @@
  *     et relance les inscriptions non payées (après 3 jours puis 10 jours) ;
  *  3. il envoie les e-mails depuis Gmail, au nom de secretariat@himmelsweg.fr ;
  *  4. quand quelqu'un ouvre son lien, il vérifie la clé et ouvre sa session dans l'app ;
- *  5. il enregistre sur GitHub les modifications du site faites dans l'app (écran « Site » des admins).
+ *  5. il enregistre sur GitHub les modifications du site faites dans l'app (écran « Site » des admins) ;
+ *  6. il range dans le Drive les photos déposées par les pèlerins (dossier « Himmelsweg – photos du pèlerinage »).
  *
  * Réglages : Paramètres du projet → Propriétés du script (jamais dans le code ni dans un chat).
  *   HELLOASSO_CLIENT_ID, HELLOASSO_CLIENT_SECRET : clé API HelloAsso
@@ -71,6 +72,9 @@ function doPost(e) {
     if (demande.action === 'verifier') return json_(verifier_(demande.ref));
     if (demande.action === 'notifier') return json_(notifier_(demande));
     if (demande.action === 'site') return json_(site_(demande));
+    if (demande.action === 'photo') return json_(photo_(demande));
+    if (demande.action === 'photoTri') return json_(photoTri_(demande));
+    if (demande.action === 'photoSupprimer') return json_(photoSupprimer_(demande));
     return json_({ erreur: 'Demande invalide.' });
   } catch (err) {
     console.error(err);
@@ -678,6 +682,118 @@ function site_(d) {
     return { ok: true };
   }
   throw refus_('Demande invalide.');
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. Photos du pèlerinage, rangées dans le Drive                      */
+/* ------------------------------------------------------------------ */
+
+// Les pèlerins déposent à partir du premier jour ; les admins à tout moment (pour essayer).
+const PHOTOS_DEPUIS = '2027-05-07';
+const PHOTOS_JUSQU_A = '2027-12-31';
+const PHOTO_MAX = 6000000; // taille du texte base64 (l'app envoie des photos réduites, ~1 Mo)
+const DOSSIERS_PHOTOS = { a_trier: 'À trier', publiee: 'Galerie', refusee: 'Non retenues' };
+
+/** Dossier du Drive (créé au premier usage, retrouvé ensuite grâce aux propriétés du script). */
+function dossierPhotos_(statut) {
+  const props = PropertiesService.getScriptProperties();
+  const dossier = (cle, nom, parent) => {
+    const id = props.getProperty(cle);
+    if (id) {
+      try {
+        const d = DriveApp.getFolderById(id);
+        if (!d.isTrashed()) return d;
+      } catch (e) {
+        // dossier supprimé : on le recrée
+      }
+    }
+    const d = parent ? parent.createFolder(nom) : DriveApp.createFolder(nom);
+    props.setProperty(cle, d.getId());
+    return d;
+  };
+  const racine = dossier('PHOTOS_DOSSIER', 'Himmelsweg – photos du pèlerinage');
+  return statut ? dossier('PHOTOS_DOSSIER_' + statut, DOSSIERS_PHOTOS[statut], racine) : racine;
+}
+
+/**
+ * Dépôt d'une photo : { idToken, id (choisi par l'app, pour pouvoir réessayer sans doublon),
+ *   base64 (JPEG réduit), vignette (petit JPEG en base64), largeur, hauteur, prise (date de la photo) }
+ */
+function photo_(d) {
+  const appelant = qui_(d.idToken);
+  const membre = appelant.admin ? null : lireDocument_('membres/' + appelant.uid);
+  if (!appelant.admin && !membre) throw refus_('Réservé aux participants du pèlerinage.');
+  const jour = Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd');
+  if (!appelant.admin && (jour < PHOTOS_DEPUIS || jour > PHOTOS_JUSQU_A)) {
+    throw refus_('Le dépôt des photos ouvre le premier jour du pèlerinage.');
+  }
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(d.id || '')) throw refus_('Demande invalide.');
+  if (lireDocument_('photos/' + d.id)) return { ok: true, deja: true };
+  const b64 = String(d.base64 || '');
+  const vignette = String(d.vignette || '');
+  if (!b64 || b64.length > PHOTO_MAX) throw refus_('Photo trop lourde.');
+  if (!vignette || vignette.length > 80000) throw refus_('Vignette invalide.');
+  const octets = Utilities.base64Decode(b64);
+  if ((octets[0] & 0xff) !== 0xff || (octets[1] & 0xff) !== 0xd8) throw refus_('Seules les photos JPEG sont acceptées.');
+
+  const nom = membre ? ((membre.prenom || '') + ' ' + (membre.nom || '')).trim() : appelant.email;
+  const prise = d.prise && !isNaN(new Date(d.prise)) ? new Date(d.prise) : new Date();
+  const nomFichier = Utilities.formatDate(prise, 'Europe/Paris', 'yyyy-MM-dd HH.mm.ss') + ' – ' + (nom || 'participant') + ' – ' + d.id.slice(0, 6) + '.jpg';
+  const fichier = dossierPhotos_('a_trier').createFile(Utilities.newBlob(octets, 'image/jpeg', nomFichier));
+  fichier.setDescription('Déposée dans l’app par ' + nom);
+  enregistrer_([
+    ecriture_(
+      'photos/' + d.id,
+      {
+        auteur: appelant.uid,
+        nom: nom || '',
+        chapitre: (membre && membre.chapitre) || null,
+        statut: 'a_trier',
+        fichier: fichier.getId(),
+        vignette,
+        largeur: Number(d.largeur) || 0,
+        hauteur: Number(d.hauteur) || 0,
+        prise,
+        le: new Date(),
+      },
+      { existe: false },
+    ),
+  ]);
+  return { ok: true };
+}
+
+/** Tri par un admin : { idToken, id, statut: 'publiee' | 'refusee' | 'a_trier' } */
+function photoTri_(d) {
+  const appelant = qui_(d.idToken);
+  if (!appelant.admin) throw refus_('Réservé aux administrateurs.');
+  if (!DOSSIERS_PHOTOS[d.statut]) throw refus_('Demande invalide.');
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(d.id || '')) throw refus_('Demande invalide.');
+  const photo = lireDocument_('photos/' + d.id);
+  if (!photo) throw refus_('Photo introuvable.');
+  const f = DriveApp.getFileById(photo.fichier);
+  f.moveTo(dossierPhotos_(d.statut));
+  // Une photo gardée s'ouvre en grand dans l'app : elle doit être lisible par lien (l'adresse reste secrète,
+  // seuls les inscrits la voient dans l'app). Les autres restent privées.
+  if (d.statut === 'publiee') f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  else f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE);
+  modifier_('photos/' + d.id, { statut: d.statut, trieeLe: new Date(), trieePar: appelant.email });
+  return { ok: true };
+}
+
+/** Le pèlerin retire une photo pas encore triée (ou un admin, n'importe laquelle) : elle part à la corbeille du Drive. */
+function photoSupprimer_(d) {
+  const appelant = qui_(d.idToken);
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(d.id || '')) throw refus_('Demande invalide.');
+  const photo = lireDocument_('photos/' + d.id);
+  if (!photo) return { ok: true };
+  if (!appelant.admin && !(photo.auteur === appelant.uid && photo.statut === 'a_trier')) throw refus_('Vous ne pouvez plus retirer cette photo.');
+  try {
+    DriveApp.getFileById(photo.fichier).setTrashed(true);
+  } catch (e) {
+    // déjà supprimée dans le Drive
+  }
+  enregistrer_([{ delete: nomDocument_('photos/' + d.id) }]);
+  return { ok: true };
 }
 
 function enteteGithub_() {
