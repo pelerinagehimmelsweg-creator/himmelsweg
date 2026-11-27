@@ -32,6 +32,9 @@ before(async () => {
     await setDoc(doc(db, 'parcours/e1'), { titre: 'Départ' });
     await setDoc(doc(db, 'prevoyance/p1'), { objet: 'Tentes' });
     await setDoc(doc(db, 'traces/t1'), { nom: 'Vendredi', trace: 'abc' });
+    await setDoc(doc(db, 'photos/p1'), { auteur: 'pelA', statut: 'a_trier', vignette: 'x' });
+    await setDoc(doc(db, 'photos/p2'), { auteur: 'pelB', statut: 'publiee', vignette: 'y' });
+    await setDoc(doc(db, 'photos/p3'), { auteur: 'pelB', statut: 'a_trier', vignette: 'z' });
     await setDoc(doc(db, 'reperes/r1'), { type: 'eau', lat: 48, lng: 7 });
     await setDoc(doc(db, 'fils/logistique/messages/m1'), { auteur: 'logi', texte: 'Bonjour' });
     await setDoc(doc(db, 'alertes/a1'), { auteur: 'secuA', traitee: false });
@@ -191,6 +194,19 @@ test('position des chefs : le chef écrit la sienne, seule la logistique la voit
   await assertSucceeds(getDocs(collection(admin(), 'positions')));
   await assertFails(deleteDoc(doc(membre('logi'), 'positions/chefA')));
   await assertSucceeds(deleteDoc(doc(membre('chefA'), 'positions/chefA')));
+});
+
+test('photos : galerie pour les participants, photos à trier pour l’auteur et les admins', async () => {
+  const pel = membre('pelA');
+  await assertSucceeds(getDocs(query(collection(pel, 'photos'), where('statut', '==', 'publiee'))));
+  await assertSucceeds(getDocs(query(collection(pel, 'photos'), where('auteur', '==', 'pelA'))));
+  await assertSucceeds(getDoc(doc(pel, 'photos/p1')));
+  await assertFails(getDoc(doc(pel, 'photos/p3')));
+  await assertFails(getDocs(query(collection(pel, 'photos'), where('statut', '==', 'a_trier'))));
+  await assertFails(getDocs(query(collection(env.unauthenticatedContext().firestore(), 'photos'), where('statut', '==', 'publiee'))));
+  await assertSucceeds(getDocs(query(collection(admin(), 'photos'), where('statut', '==', 'a_trier'))));
+  await assertFails(setDoc(doc(pel, 'photos/p1'), { auteur: 'pelA', statut: 'publiee' }));
+  await assertFails(setDoc(doc(admin(), 'photos/p9'), { statut: 'publiee' }));
 });
 
 test('discussions : chacun son équipe, messages signés', async () => {

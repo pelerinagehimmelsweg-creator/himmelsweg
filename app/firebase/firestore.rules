@@ -94,6 +94,13 @@ service cloud.firestore {
         && request.resource.data.lat is number && request.resource.data.lng is number;
       allow delete: if estAdmin() || (connecte() && request.auth.uid == uid);
     }
+    // Photos du pèlerinage : la fiche est écrite par le script Google (qui range la photo dans le Drive).
+    // Chacun voit les photos gardées par les admins et les siennes ; les admins voient tout pour trier.
+    match /photos/{id} {
+      allow read: if estAdmin()
+        || (jeSuisMembre() && (resource.data.statut == 'publiee' || resource.data.auteur == request.auth.uid));
+      allow write: if false;
+    }
     match /prevoyance/{id} {
       allow read, write: if equipe('logistique');
     }

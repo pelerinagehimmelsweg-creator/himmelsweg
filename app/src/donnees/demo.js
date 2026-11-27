@@ -7,7 +7,7 @@ import { REPERES_EXEMPLE, TRACES_EXEMPLE } from './carte.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v6';
+const CLE = 'himmelsweg-demo-v7';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -59,6 +59,7 @@ function lireEtat() {
       admins: [],
     },
     alertes: [],
+    photos: [],
   };
 }
 
@@ -325,6 +326,44 @@ export function creerDemo() {
       etat.listes[nom] = etat.listes[nom].filter((x) => x.id !== id);
       sauver();
     },
+    // Photos : en démo, la « photo en grand » est la vignette (rien ne part dans un Drive).
+    async envoyerPhoto(p) {
+      const s = session();
+      if (!s) throw new Error('Session expirée.');
+      await new Promise((ok) => setTimeout(ok, 300));
+      if (etat.photos.some((x) => x.id === p.id)) return;
+      etat.photos = [
+        ...etat.photos,
+        { id: p.id, auteur: s.id, nom: `${s.prenom} ${s.nom}`.trim(), chapitre: s.chapitre ?? null, statut: 'a_trier', vignette: p.vignette, largeur: p.largeur, hauteur: p.hauteur, prise: p.prise, le: new Date().toISOString() },
+      ];
+      sauver();
+    },
+    async trierPhoto(id, statut) {
+      exigerAdmin();
+      etat.photos = etat.photos.map((x) => (x.id === id ? { ...x, statut, trieeLe: new Date().toISOString() } : x));
+      sauver();
+    },
+    async supprimerPhoto(id) {
+      const s = session();
+      const p = etat.photos.find((x) => x.id === id);
+      if (p && !s?.estAdmin && !(p.auteur === s?.id && p.statut === 'a_trier')) throw new Error('Vous ne pouvez plus retirer cette photo.');
+      etat.photos = etat.photos.filter((x) => x.id !== id);
+      sauver();
+    },
+    ecouterPhotos: (quoi, n, cb) =>
+      ecouter(() => {
+        const s = session();
+        if (!s) return [];
+        const l =
+          quoi === 'miennes'
+            ? etat.photos.filter((p) => p.auteur === s.id)
+            : quoi === 'galerie'
+              ? etat.photos.filter((p) => p.statut === 'publiee')
+              : s.estAdmin
+                ? etat.photos.filter((p) => p.statut === 'a_trier')
+                : [];
+        return [...l].sort((a, b) => a.id.localeCompare(b.id)).slice(0, n);
+      }, cb),
     ecouterFil: (equipe, cb) =>
       ecouter(() => {
         const s = session();

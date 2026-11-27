@@ -85,6 +85,10 @@ export function Accueil({ donnees, session }) {
       {moment === 'apres' && (
         <>
           <p class="intro-apres">Merci d’avoir marché avec nous sur le chemin du Ciel !</p>
+          <a class="encart lien-encart" href="#/photos">
+            <span>Les photos du pèlerinage : voir la galerie et déposer les vôtres</span>
+            <span aria-hidden="true">›</span>
+          </a>
           {textes('apres')}
           {ajouter('apres', 'Ajouter un texte pour l’après-pèlerinage')}
         </>
@@ -202,6 +206,10 @@ function Pendant({ donnees, contenus }) {
         <a class="tuile" href="#/prier">
           <strong>Prier</strong>
           <span>Chants et prières</span>
+        </a>
+        <a class="tuile" href="#/photos">
+          <strong>Photos</strong>
+          <span>Déposer, voir la galerie</span>
         </a>
         <a class="tuile" href="#/carte">
           <strong>Carte</strong>

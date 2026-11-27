@@ -3,6 +3,8 @@ import { Icone, useAbonnement, useEnLigne } from './composants/base.jsx';
 import logo from './composants/logo.png';
 import { droits } from './donnees/modele.js';
 import { usePartagePosition } from './donnees/partage.js';
+import { envoyer as envoyerPhotos } from './donnees/photos.js';
+import { Photos } from './ecrans/photos.jsx';
 import { Connexion } from './ecrans/connexion.jsx';
 import { Rubrique } from './ecrans/contenus.jsx';
 import { Accueil } from './ecrans/accueil.jsx';
@@ -48,6 +50,11 @@ export function App({ donnees }) {
   const [lienEnCours, setLienEnCours] = useState(false);
   // Un chef qui a activé le partage envoie sa position tant que l'app est ouverte, quel que soit l'onglet.
   usePartagePosition(donnees, session && !session.refuse ? session : null);
+  // Photos déposées sans réseau : elles partent dès que l'app est ouverte avec du réseau.
+  useEffect(() => {
+    if (!session?.id || session.refuse || !enLigne) return;
+    envoyerPhotos(donnees, session.id);
+  }, [session?.id, enLigne]);
 
   // Arrivée par le lien personnel reçu par e-mail : app.himmelsweg.fr/#cle=...
   useEffect(() => {
@@ -94,7 +101,8 @@ export function App({ donnees }) {
       ) : (
         <AdminInscriptions donnees={donnees} />
       );
-  } else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
+  } else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
+  else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
   else if (actif === 'equipe') contenu = <Equipe donnees={donnees} session={session} sous={sous} detail={detail} />;
   else if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;
   else if (actif === 'pelerins') contenu = <ListeMembres donnees={donnees} session={session} />;

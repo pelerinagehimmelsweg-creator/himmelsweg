@@ -32,6 +32,39 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
     ...proprietes,
   };
   const cache = {};
+  // Faux Drive : dossiers et fichiers en mémoire.
+  const fichiers = new Map();
+  const dossiers = new Map();
+  let numero = 0;
+  const nouveauDossier = (nom, parent) => {
+    const id = 'dossier-' + ++numero;
+    const d = { nom, parent, getId: () => id, isTrashed: () => false, createFolder: (n) => nouveauDossier(n, id), createFile: (blob) => nouveauFichier(blob, id) };
+    dossiers.set(id, d);
+    return d;
+  };
+  const nouveauFichier = (blob, dossier) => {
+    const id = 'fichier-' + ++numero;
+    const f = {
+      blob, dossier, partage: 'PRIVATE', corbeille: false,
+      getId: () => id,
+      setDescription: (t) => (f.description = t),
+      moveTo: (d) => (f.dossier = d.getId()),
+      setSharing: (a) => (f.partage = a),
+      setTrashed: (v) => (f.corbeille = v),
+    };
+    fichiers.set(id, f);
+    return f;
+  };
+  const drive = {
+    createFolder: (n) => nouveauDossier(n, null),
+    getFolderById: (id) => {
+      if (!dossiers.has(id)) throw new Error('introuvable');
+      return dossiers.get(id);
+    },
+    getFileById: (id) => fichiers.get(id),
+    Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK', PRIVATE: 'PRIVATE' },
+    Permission: { VIEW: 'VIEW', NONE: 'NONE' },
+  };
   const b64ws = (x) => Buffer.from(x).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
   const rep = (code, corps) => ({ code, corps: typeof corps === 'string' ? corps : JSON.stringify(corps) });
 
@@ -142,8 +175,17 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
       Charset: { UTF_8: 'UTF-8' },
       base64Encode: (x) => Buffer.from(x, 'utf8').toString('base64'),
       base64Decode: (x) => [...Buffer.from(x, 'base64')],
-      newBlob: (octets) => ({ getDataAsString: () => Buffer.from(octets).toString('utf8') }),
+      newBlob: (octets, type, nom) => ({ octets, type, nom, getDataAsString: () => Buffer.from(octets).toString('utf8') }),
+      formatDate: (d, _tz, fmt) => {
+        const p = Object.fromEntries(
+          new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+            .formatToParts(d)
+            .map((x) => [x.type, x.value]),
+        );
+        return fmt.replace('yyyy', p.year).replace('MM', p.month).replace('dd', p.day).replace('HH', p.hour).replace('mm', p.minute).replace('ss', p.second);
+      },
     },
+    DriveApp: drive,
     UrlFetchApp: {
       fetch: (url, opts = {}) => {
         appels.push({ url, opts });
@@ -176,7 +218,7 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
   for (const [k, v] of Object.entries(base)) ecrire(k, v);
   const lire = (chemin) => (docs.has(chemin) ? JSON.parse(JSON.stringify(s.depuisChamps(docs.get(chemin)))) : null);
   const appeler = (demande) => JSON.parse(s.doPost({ postData: { contents: JSON.stringify(demande) } }).texte);
-  return { ...s, appels, emails, intentions, envoisFcm, props, docs, ecrire, lire, appeler, github, commits };
+  return { ...s, appels, emails, intentions, envoisFcm, props, docs, ecrire, lire, appeler, github, commits, fichiers, dossiers };
 }
 
 /** Base avec le questionnaire et les tarifs de départ. */
@@ -506,4 +548,64 @@ test('HelloAsso refuse le nom du payeur (« test test ») : le paiement se prép
   assert.ok(r.redirectUrl, JSON.stringify(r));
   assert.equal(s.intentions.length, 1);
   assert.equal(s.intentions[0].corps.payer, undefined);
+});
+
+const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]).toString('base64');
+const PHOTO = { action: 'photo', id: 'ph-abc12345', base64: JPEG, vignette: JPEG, largeur: 2000, hauteur: 1500, prise: '2027-05-08T08:30:00Z' };
+const pendant = () => Date.parse('2027-05-08T10:00:00Z');
+
+test('photos : un pèlerin dépose pendant le pèlerinage, rangée « À trier » dans le Drive, sans doublon', () => {
+  const s = charger({ base: EQUIPE, sessions: SESSIONS, maintenant: pendant });
+  assert.deepEqual(s.appeler({ ...PHOTO, idToken: 'jeton-pel1' }), { ok: true });
+  const p = s.lire('photos/ph-abc12345');
+  assert.equal(p.auteur, 'pel1');
+  assert.equal(p.statut, 'a_trier');
+  assert.equal(p.chapitre, 'A');
+  const f = s.fichiers.get(p.fichier);
+  assert.equal(s.dossiers.get(f.dossier).nom, 'À trier');
+  assert.equal(s.dossiers.get(s.dossiers.get(f.dossier).parent).nom, 'Himmelsweg – photos du pèlerinage');
+  assert.match(f.blob.nom, /^2027-05-08 10\.30\.00 – Paul – ph-abc\.jpg$/);
+  assert.equal(f.partage, 'PRIVATE');
+  // Réessai après une coupure de réseau : rien de neuf.
+  assert.equal(s.appeler({ ...PHOTO, idToken: 'jeton-pel1' }).deja, true);
+  assert.equal(s.fichiers.size, 1);
+  // Deuxième photo : même dossier.
+  s.appeler({ ...PHOTO, id: 'ph-def67890', idToken: 'jeton-pel1' });
+  assert.equal(s.dossiers.size, 2);
+});
+
+test('photos : refus avant le pèlerinage, sans session, pour un fichier qui n’est pas une photo', () => {
+  const avant = charger({ base: EQUIPE, sessions: SESSIONS, maintenant: () => Date.parse('2027-03-01T10:00:00Z') });
+  assert.match(avant.appeler({ ...PHOTO, idToken: 'jeton-pel1' }).erreur, /premier jour/);
+  assert.deepEqual(avant.appeler({ ...PHOTO, idToken: 'jeton-admin' }), { ok: true }); // les admins peuvent essayer
+  const s = charger({ base: EQUIPE, sessions: SESSIONS, maintenant: pendant });
+  assert.match(s.appeler({ ...PHOTO, idToken: 'faux' }).erreur, /Session expirée/);
+  assert.match(s.appeler({ ...PHOTO, idToken: 'jeton-pel1', base64: Buffer.from('<svg>').toString('base64') }).erreur, /JPEG/);
+  assert.ok(s.appeler({ ...PHOTO, idToken: 'jeton-pel1', id: '../membres/pel2' }).erreur);
+  assert.equal(s.fichiers.size, 0);
+});
+
+test('photos : tri par un admin (galerie partagée par lien), retrait par l’auteur tant que pas triée', () => {
+  const s = charger({ base: EQUIPE, sessions: SESSIONS, maintenant: pendant });
+  s.appeler({ ...PHOTO, idToken: 'jeton-pel1' });
+  s.appeler({ ...PHOTO, id: 'ph-autre123', idToken: 'jeton-pel1' });
+  assert.match(s.appeler({ action: 'photoTri', idToken: 'jeton-pel1', id: 'ph-abc12345', statut: 'publiee' }).erreur, /administrateurs/);
+  s.appeler({ action: 'photoTri', idToken: 'jeton-admin', id: 'ph-abc12345', statut: 'publiee' });
+  const p = s.lire('photos/ph-abc12345');
+  assert.equal(p.statut, 'publiee');
+  assert.equal(p.trieePar, 'directrice@gmail.com');
+  const f = s.fichiers.get(p.fichier);
+  assert.equal(s.dossiers.get(f.dossier).nom, 'Galerie');
+  assert.equal(f.partage, 'ANYONE_WITH_LINK');
+  // Retirée de la galerie : redevient privée.
+  s.appeler({ action: 'photoTri', idToken: 'jeton-admin', id: 'ph-abc12345', statut: 'refusee' });
+  assert.equal(f.partage, 'PRIVATE');
+  assert.equal(s.dossiers.get(f.dossier).nom, 'Non retenues');
+  // L'auteur ne peut plus retirer une photo triée, mais peut retirer l'autre.
+  assert.match(s.appeler({ action: 'photoSupprimer', idToken: 'jeton-pel1', id: 'ph-abc12345' }).erreur, /plus retirer/);
+  assert.ok(s.appeler({ action: 'photoSupprimer', idToken: 'jeton-secu', id: 'ph-autre123' }).erreur);
+  const autre = s.lire('photos/ph-autre123').fichier;
+  assert.deepEqual(s.appeler({ action: 'photoSupprimer', idToken: 'jeton-pel1', id: 'ph-autre123' }), { ok: true });
+  assert.equal(s.lire('photos/ph-autre123'), null);
+  assert.equal(s.fichiers.get(autre).corbeille, true);
 });

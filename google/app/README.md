@@ -52,6 +52,13 @@ le site se met à jour tout seul en 1 à 2 minutes. Le script a besoin d'une cl�
 
 Quand la clé expire, l'écran du site l'indique : en recréer une et remplacer `GITHUB_CLE`.
 
+## 4. Les photos du pèlerinage (dans le Drive)
+
+Rien à régler : au premier dépôt, le script crée dans le Drive le dossier
+« Himmelsweg – photos du pèlerinage », avec trois sous-dossiers : « À trier », « Galerie », « Non retenues ».
+Après avoir recollé le code, lancez une fois `installer` : Google demande l'autorisation d'accéder au Drive, acceptez.
+Une photo gardée dans la galerie est lisible par lien (seuls les inscrits voient ce lien, dans l'app) ; les autres restent privées.
+
 ## Bon à savoir
 
 - Gmail gratuit : 100 e-mails par jour. Largement assez pour les liens au fil des inscriptions.
