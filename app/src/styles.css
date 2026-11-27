@@ -382,13 +382,44 @@ a.lien-encart { text-decoration: none; cursor: pointer; flex-wrap: nowrap; }
 .lien-retour { display: inline-block; margin-bottom: .4rem; text-decoration: none; font-weight: 600; }
 
 /* Inviter un ami */
-.carte-inviter { display: flex; align-items: center; justify-content: space-between; gap: .8rem; text-decoration: none; color: var(--encre); border-left: 4px solid var(--rouge); }
-.carte-inviter strong { display: block; font-family: var(--titre); color: var(--rouge-fonce); font-size: 1.1rem; }
-.carte-inviter small { display: block; color: var(--gris); font-size: .9rem; }
-.carte-inviter .bouton { flex: none; }
+.carte-inviter, .carte-bilan { display: flex; align-items: center; justify-content: space-between; gap: .8rem; text-decoration: none; color: var(--encre); border-left: 4px solid var(--rouge); }
+.carte-bilan { border-left-color: #d4a72c; background: #fffaf0; }
+.carte-inviter strong, .carte-bilan strong { display: block; font-family: var(--titre); color: var(--rouge-fonce); font-size: 1.1rem; }
+.carte-inviter small, .carte-bilan small { display: block; color: var(--gris); font-size: .9rem; }
+.carte-inviter .bouton, .carte-bilan .bouton { flex: none; }
 .invitation { display: flex; justify-content: center; margin: .4rem 0 1rem; }
 .invitation canvas { width: min(100%, 340px); height: auto; aspect-ratio: 9 / 16; border-radius: 16px; box-shadow: 0 8px 28px rgba(0,0,0,.25); background: var(--encre); }
 label.formulaire { display: block; font-weight: 600; margin-bottom: 1rem; }
 label.formulaire textarea { display: block; width: 100%; margin-top: .25rem; padding: .5rem .7rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); font-weight: 400; }
 .partage-liens { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
 .partage-liens .bouton { padding-left: .3rem; padding-right: .3rem; }
+
+/* Questionnaire de fin */
+.etoiles { display: flex; gap: .2rem; }
+.etoiles button { width: 48px; height: 48px; border: 0; background: none; font-size: 2.1rem; line-height: 1; color: #d9cfb8; cursor: pointer; padding: 0; }
+.etoiles button.pleine { color: #e0a419; }
+.etoiles button:focus-visible { outline: 3px solid #e9a99f; border-radius: 8px; }
+.bilan .temoignage { margin: 1.2rem 0; }
+.bilan .temoignage textarea { width: 100%; }
+.merci-bilan { text-align: center; padding: 2rem 1rem; }
+.merci-bilan > span { font-size: 3rem; }
+.onglets-internes { display: flex; gap: .3rem; margin-bottom: 1rem; border-bottom: 1px solid var(--creme-fonce); }
+.onglets-internes button { flex: 1; min-height: 44px; border: 0; background: none; font: inherit; font-weight: 600; color: var(--gris); border-bottom: 3px solid transparent; cursor: pointer; }
+.onglets-internes button.actif { color: var(--rouge-fonce); border-bottom-color: var(--rouge); }
+.chiffres:has(> div:nth-child(2):last-child) { grid-template-columns: 1fr 1fr; }
+.barres { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.barres li { display: grid; grid-template-columns: 1fr auto; gap: .2rem .6rem; align-items: center; }
+.barre-titre { grid-column: 1 / -1; font-weight: 600; }
+.barre-titre small { margin-left: .4rem; font-weight: 400; color: var(--gris); }
+.barre { height: 10px; border-radius: 99px; background: var(--creme-fonce); overflow: hidden; }
+.barre span { display: block; height: 100%; border-radius: 99px; background: var(--rouge); }
+.barre-valeur { min-width: 3.5rem; text-align: right; color: var(--rouge-fonce); }
+.commentaires summary { cursor: pointer; font-weight: 700; }
+.commentaires ul { margin: .6rem 0 0; padding-left: 1.1rem; display: grid; gap: .5rem; }
+.commentaires small { display: block; color: var(--gris); }
+.temoignage-admin { margin: 0 0 .8rem; }
+.temoignage-admin p { margin: 0 0 .5rem; font-style: italic; }
+.temoignage-admin footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; font-weight: 600; }
+.temoignage-admin footer small { font-weight: 400; color: var(--gris); }
+.temoignage-admin footer .actions { margin: 0; }
+.temoignage-admin.retenu { border-left: 4px solid #e0a419; }

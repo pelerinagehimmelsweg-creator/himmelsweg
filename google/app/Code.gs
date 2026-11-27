@@ -325,6 +325,11 @@ function suivre() {
   } catch (err) {
     console.error('Comptes des repas : ' + err.message);
   }
+  try {
+    rappelsBilan_();
+  } catch (err) {
+    console.error('Questionnaire de fin : ' + err.message);
+  }
   const maintenant = Date.now();
   listerCollection_('dossiers').forEach((dossier) => {
     const ref = dossier.id;
@@ -349,6 +354,34 @@ function suivre() {
       console.error('Inscription ' + ref + ' : ' + err.message);
     }
   });
+}
+
+/**
+ * Questionnaire de fin : une notification à tous à l'ouverture (dimanche 9 mai, 19 h),
+ * puis une relance 3 jours après à ceux qui n'ont pas répondu. Chacune une seule fois.
+ * Les admins peuvent tout arrêter en choisissant « Fermé » dans l'app.
+ */
+const BILAN_OUVERTURE = '2027-05-09T19:00:00+02:00';
+const BILAN_RELANCE_JOURS = 3;
+function rappelsBilan_() {
+  const ouverture = Date.parse(BILAN_OUVERTURE);
+  const maintenant = Date.now();
+  if (maintenant < ouverture) return;
+  const config = lireDocument_('config/bilan') || {};
+  if (config.ouverture === 'ferme' || config.relance) return;
+  const relancer = maintenant >= ouverture + BILAN_RELANCE_JOURS * 86400000;
+  if (config.annonce && !relancer) return;
+  const inscrits = listerCollection_('membres').filter((m) => m.statut !== 'en_attente' && (m.roles || []).length);
+  if (!config.annonce) {
+    envoyerNotifications_(inscrits.map((m) => m.id), 'Votre avis compte', 'Merci pour ces trois jours ! Dites-nous en 3 minutes ce qui vous a plu, dans l’app.');
+    modifier_('config/bilan', { annonce: true });
+    return;
+  }
+  const faits = {};
+  listerCollection_('bilanFait').forEach((f) => (faits[f.id] = true));
+  const restants = inscrits.filter((m) => !faits[m.id]).map((m) => m.id);
+  if (restants.length) envoyerNotifications_(restants, 'Il est encore temps', 'Votre avis sur le pèlerinage nous aide beaucoup : 3 minutes dans l’app.');
+  modifier_('config/bilan', { relance: true });
 }
 
 /** Envoie à chaque personne du dossier son lien personnel, une seule fois. */

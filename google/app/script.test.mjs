@@ -639,3 +639,31 @@ test('invitation : l’ami inscrit garde la trace de qui l’a invité, compté 
   assert.equal(s.lire('dossiers/' + r2.ref).invitePar, undefined);
   assert.ok(s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: { prenom: 'Paul', nom: 'Ott', email: 'paul@exemple.fr' }, don: 0, reglement: true, invite: '../x' }).redirectUrl);
 });
+
+test('questionnaire de fin : annonce à l’ouverture, relance 3 jours après aux seuls retardataires, une fois chacune', () => {
+  let t = Date.parse('2027-05-09T16:00:00Z');
+  const s = charger({ base: EQUIPE, maintenant: () => t });
+  s.suivre();
+  assert.equal(s.envoisFcm.length, 0); // avant dimanche 19 h
+  t = Date.parse('2027-05-09T17:05:00Z');
+  s.suivre();
+  assert.deepEqual(s.envoisFcm.map((m) => m.token).sort(), ['tok-logi', 'tok-pel1', 'tok-secu']);
+  assert.equal(s.envoisFcm[0].webpush.notification.title, 'Votre avis compte');
+  s.envoisFcm.length = 0;
+  s.suivre();
+  assert.equal(s.envoisFcm.length, 0); // une seule annonce
+  s.ecrire('bilanFait/pel1', { jour: '2027-05-10' });
+  t += 3.1 * 86400000;
+  s.suivre();
+  assert.deepEqual(s.envoisFcm.map((m) => m.token).sort(), ['tok-logi', 'tok-secu']);
+  s.envoisFcm.length = 0;
+  t += 86400000;
+  s.suivre();
+  assert.equal(s.envoisFcm.length, 0);
+});
+
+test('questionnaire de fin fermé par les admins : aucune notification', () => {
+  const s = charger({ base: { ...EQUIPE, 'config/bilan': { ouverture: 'ferme' } }, maintenant: () => Date.parse('2027-05-10T08:00:00Z') });
+  s.suivre();
+  assert.equal(s.envoisFcm.length, 0);
+});

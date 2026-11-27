@@ -11,6 +11,7 @@ import { Rubrique } from './ecrans/contenus.jsx';
 import { Accueil } from './ecrans/accueil.jsx';
 import { FicheMembre, ListeMembres } from './ecrans/membres.jsx';
 import { AdminInscriptions, AdminQuestionnaire } from './ecrans/admin.jsx';
+import { AdminBilan, Bilan } from './ecrans/bilan.jsx';
 import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
@@ -98,12 +99,15 @@ export function App({ donnees }) {
         <EditeurSite donnees={donnees} />
       ) : sous === 'organisation' ? (
         <AdminOrganisation donnees={donnees} chapitreId={detail} />
+      ) : sous === 'bilan' ? (
+        <AdminBilan donnees={donnees} />
       ) : sous === 'notification' ? (
         <EnvoiNotification donnees={donnees} />
       ) : (
         <AdminInscriptions donnees={donnees} />
       );
-  } else if (page === 'inviter') contenu = <Inviter donnees={donnees} session={session} />;
+  } else if (page === 'bilan') contenu = <Bilan donnees={donnees} session={session} />;
+  else if (page === 'inviter') contenu = <Inviter donnees={donnees} session={session} />;
   else if (page === 'boutique' || page === 'don') contenu = <PageHelloAsso donnees={donnees} quoi={page} />;
   else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
   else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;

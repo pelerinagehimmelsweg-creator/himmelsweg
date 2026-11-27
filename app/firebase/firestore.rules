@@ -167,6 +167,26 @@ service cloud.firestore {
       allow read, update: if false;
     }
 
+    // Questionnaire de fin. Chaque participant répond une fois : la réponse (bilan) et la marque
+    // « a répondu » (bilanFait) sont écrites ensemble. Réponse anonyme : ni identifiant ni nom.
+    // Seuls les admins lisent les réponses ; ils peuvent « retenir » un témoignage.
+    function fait() { return /databases/$(database)/documents/bilanFait/$(request.auth.uid); }
+    match /bilan/{id} {
+      allow read, delete: if estAdmin();
+      allow update: if estAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['retenu']);
+      allow create: if jeSuisMembre() && !exists(fait()) && existsAfter(fait())
+        && request.resource.data.keys().hasOnly(['reponses', 'groupe', 'jour', 'anonyme', 'auteur', 'nom', 'temoignage', 'publier', 'signature'])
+        && request.resource.data.reponses is map
+        && (request.resource.data.anonyme == true
+              ? !request.resource.data.keys().hasAny(['auteur', 'nom'])
+              : request.resource.data.anonyme == false && request.resource.data.auteur == request.auth.uid && id == request.auth.uid);
+    }
+    match /bilanFait/{uid} {
+      allow read: if estAdmin() || (connecte() && request.auth.uid == uid);
+      allow delete: if estAdmin();
+      allow create: if jeSuisMembre() && request.auth.uid == uid && request.resource.data.keys().hasOnly(['jour']);
+    }
+
     match /{autre=**} {
       allow read, write: if false;
     }

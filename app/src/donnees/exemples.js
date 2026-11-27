@@ -177,12 +177,53 @@ export const CONTENUS = [
     titre: 'Merci !',
     texte: 'Merci à chacun pour ces trois jours sur le chemin du Ciel. Texte à compléter par la directrice et l’aumônier.',
   },
-  {
-    id: 'c-questionnaire',
-    rubrique: 'apres',
-    periode: 'apres',
-    ordre: 2,
-    titre: 'Questionnaire de satisfaction',
-    texte: 'Donnez-nous votre avis en quelques minutes. Le lien sera ajouté ici après le pèlerinage.',
-  },
 ];
+
+// Réponses fictives au questionnaire de fin (démo). Bernadette (m-F2) n'a pas encore répondu.
+const TOUCHE = [
+  'La messe du dimanche à Colmar, tous ensemble après trois jours de marche.',
+  'Les chants dans les vignes, le samedi matin.',
+  'La fraternité dans le chapitre : on ne se connaissait pas, on repart amis.',
+  'Le silence de la montée vers le Haut-Koenigsbourg.',
+  'Les confessions le samedi soir, beaucoup de grâces.',
+];
+const IDEES = ['Un peu plus de pauses l’après-midi.', 'Des navettes pour les bagages plus tôt le matin.', 'Plus de chants appris à l’avance.', ''];
+const TEMOIGNAGES = [
+  'Fatigue et doutes au départ, paix et joie à l’arrivée. Merci à tous ceux qui ont rendu ces trois jours possibles.',
+  'Marcher en costume alsacien vers Colmar, prier et chanter avec des centaines de jeunes : je n’oublierai jamais.',
+  'J’ai trouvé un chapitre, des amies et le goût de prier. Vivement l’an prochain !',
+];
+export function bilanExemple(membres) {
+  const bilan = [];
+  const bilanFait = [];
+  membres
+    .filter((m) => m.statut !== 'en_attente' && m.id !== 'm-F2')
+    .slice(0, 16)
+    .forEach((m, i) => {
+      const anonyme = i % 3 === 1;
+      const n = (k) => Math.max(1, Math.min(5, 5 - ((i * k) % 3 === 0 ? 0 : (i + k) % 3)));
+      const t = i % 5 === 0 ? TEMOIGNAGES[(i / 5) % TEMOIGNAGES.length] : '';
+      bilanFait.push({ id: m.id, jour: '2027-05-10' });
+      bilan.push({
+        id: anonyme ? `b-anon-${i}` : m.id,
+        jour: '2027-05-10',
+        groupe: m.groupe,
+        anonyme,
+        ...(anonyme ? {} : { auteur: m.id, nom: `${m.prenom} ${m.nom}` }),
+        reponses: {
+          organisation: n(1),
+          parcours: n(2),
+          repas: n(4),
+          chapitre: n(5),
+          spirituel: 5 - (i % 7 === 3 ? 1 : 0),
+          transport: n(7),
+          appli: n(2),
+          touche: TOUCHE[i % TOUCHE.length],
+          ...(IDEES[i % IDEES.length] ? { idee: IDEES[i % IDEES.length] } : {}),
+          revenir: i % 6 === 4 ? 'Peut-être' : 'Oui',
+        },
+        ...(t ? { temoignage: t, publier: i !== 10, signature: anonyme ? (m.groupe === 'H' ? 'Un pèlerin' : 'Une pèlerine') : `${m.prenom} ${m.nom[0]}.` } : {}),
+      });
+    });
+  return { bilan, bilanFait };
+}

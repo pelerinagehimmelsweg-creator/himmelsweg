@@ -1,13 +1,13 @@
 // MODE DÉMO : tout est gardé dans le navigateur (localStorage), avec des pèlerins fictifs.
 // Il applique les mêmes droits que la vraie base, pour que la démo montre ce que voit chaque rôle.
 
-import { CHAPITRES, CONTENUS, PERSONAS, dossiersExemple, membresExemple } from './exemples.js';
+import { CHAPITRES, CONTENUS, PERSONAS, bilanExemple, dossiersExemple, membresExemple } from './exemples.js';
 import { droits, estChoriste, sansRolesDeChapitre } from './modele.js';
 import { REPERES_EXEMPLE, TRACES_EXEMPLE } from './carte.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v7';
+const CLE = 'himmelsweg-demo-v8';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -60,6 +60,8 @@ function lireEtat() {
     },
     alertes: [],
     photos: [],
+    configBilan: {},
+    ...bilanExemple(membres),
   };
 }
 
@@ -358,6 +360,29 @@ export function creerDemo() {
       const p = etat.photos.find((x) => x.id === id);
       if (p && !s?.estAdmin && !(p.auteur === s?.id && p.statut === 'a_trier')) throw new Error('Vous ne pouvez plus retirer cette photo.');
       etat.photos = etat.photos.filter((x) => x.id !== id);
+      sauver();
+    },
+    // Questionnaire de fin
+    ecouterConfigBilan: (cb) => ecouter(() => (session() ? etat.configBilan : {}), cb),
+    async enregistrerConfigBilan(c) {
+      exigerAdmin();
+      etat.configBilan = { ...etat.configBilan, ...c };
+      sauver();
+    },
+    ecouterMonBilan: (cb) => ecouter(() => !!session() && etat.bilanFait.some((f) => f.id === session().id), cb),
+    async envoyerBilan(r) {
+      const s = session();
+      if (!s || s.estAdmin) throw new Error('Réservé aux pèlerins.');
+      if (etat.bilanFait.some((f) => f.id === s.id)) throw new Error('Vous avez déjà répondu.');
+      etat.bilan.push({ ...r, id: r.anonyme ? `b-${Date.now().toString(36)}` : s.id });
+      etat.bilanFait.push({ id: s.id, jour: r.jour });
+      sauver();
+    },
+    ecouterBilans: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.bilan] : []), cb),
+    ecouterBilansFaits: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.bilanFait] : []), cb),
+    async retenirTemoignage(id, retenu) {
+      exigerAdmin();
+      etat.bilan = etat.bilan.map((b) => (b.id === id ? { ...b, retenu } : b));
       sauver();
     },
     ecouterPhotos: (quoi, n, cb) =>
