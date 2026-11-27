@@ -4,7 +4,7 @@ import { useAbonnement } from '../composants/base.jsx';
 import { droits } from '../donnees/modele.js';
 import { FILS, UNITES, filsDe, lienCarte, lienSms, listeDeCourses } from '../donnees/equipes.js';
 import { MARQUEUR_PRENOM, MODELES_NOTIFICATION, notificationAffichee, personnaliser, quandNotification } from '../donnees/notifications.js';
-import { Banniere } from '../composants/banniere.jsx';
+import { Banniere, useAffiche } from '../composants/banniere.jsx';
 
 const a = (session, ...roles) => session.estAdmin || roles.some((r) => session.roles?.includes(r));
 export const aDesOutils = (session) => a(session, 'repas', 'logistique', 'chef', 'securite');
@@ -907,6 +907,11 @@ function ApercuNotification({ n, vue }) {
       </div>
     );
   }
+  return <ApercuAndroid n={n} />;
+}
+
+function ApercuAndroid({ n }) {
+  const image = useAffiche(n);
   return (
     <div class="ecran-apercu" style={{ backgroundImage: `url(${n.image})` }}>
       <div class="notif-android">
@@ -918,7 +923,7 @@ function ApercuNotification({ n, vue }) {
           {n.symbole} {n.titre}
         </strong>
         <span>{n.texte}</span>
-        <div class="na-photo" style={{ backgroundImage: `url(${n.image})` }} />
+        <div class="na-photo" style={{ backgroundImage: `url(${image})` }} />
         {n.lien !== '/#/' && (
           <div class="na-actions">
             <span>{n.bouton}</span>

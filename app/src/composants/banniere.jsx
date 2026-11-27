@@ -3,6 +3,42 @@
 import { useEffect, useState } from 'preact/hooks';
 import { notificationAffichee } from '../donnees/notifications.js';
 
+// Le même dessin que le service worker (public/notifications/affiche.js), chargé une fois.
+let script = null;
+const chargerAffiche = () =>
+  (script ??= new Promise((ok, ko) => {
+    if (self.AFFICHE_NOTIFICATION) return ok(self.AFFICHE_NOTIFICATION);
+    const s = Object.assign(document.createElement('script'), { src: '/notifications/affiche.js' });
+    s.onload = () => ok(self.AFFICHE_NOTIFICATION);
+    s.onerror = ko;
+    document.head.append(s);
+  }));
+
+/** Adresse de l'affiche (photo + titre doré) ; la photo simple en attendant ou si le dessin échoue. */
+export function useAffiche(n) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let fini = false;
+    let cree = null;
+    const t = setTimeout(async () => {
+      try {
+        const blob = await (await chargerAffiche()).dessinerAffiche(n.modele, n.titre);
+        if (fini) return;
+        cree = URL.createObjectURL(blob);
+        setUrl(cree);
+      } catch {
+        if (!fini) setUrl(null);
+      }
+    }, 250);
+    return () => {
+      fini = true;
+      clearTimeout(t);
+      if (cree) setTimeout(() => URL.revokeObjectURL(cree), 1000);
+    };
+  }, [n.modele, n.titre]);
+  return url ?? n.image;
+}
+
 export const montrerBanniere = (n) => dispatchEvent(new CustomEvent('himmelsweg-notification', { detail: n }));
 
 export function BanniereNotification() {
@@ -34,13 +70,14 @@ export function BanniereNotification() {
 
 /** La bannière elle-même (sert aussi à l'aperçu des admins). */
 export function Banniere({ n, fermer, apercu = false }) {
+  const image = useAffiche(n);
   const aller = () => {
     location.hash = n.lien.split('#')[1] ?? '/';
     fermer?.();
   };
   return (
     <div class={`banniere-notif modele-${n.modele}${apercu ? ' apercu' : ''}`} role={apercu ? undefined : 'alert'}>
-      <div class="bn-photo" style={{ backgroundImage: `url(${n.image})` }} />
+      <div class="bn-photo" style={{ backgroundImage: `url(${image})` }} />
       {fermer && (
         <button type="button" class="bn-fermer" aria-label="Fermer" onClick={fermer}>
           ×
