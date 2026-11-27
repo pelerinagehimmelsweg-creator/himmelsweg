@@ -52,8 +52,9 @@ export function joursAvant(jour = aujourdhui()) {
 }
 
 export const LIENS = {
-  boutique: 'https://himmelsweg.fr/boutique/',
-  don: 'https://himmelsweg.fr/don/',
+  // Pages HelloAsso par défaut ; les admins peuvent les changer dans Moi (config/app).
+  boutique: 'https://www.helloasso.com/associations/association-pour-le-culte-catholique-traditionnel-en-alsace/boutiques/boutique-himmelsweg',
+  don: 'https://www.helloasso.com/associations/association-pour-le-culte-catholique-traditionnel-en-alsace/formulaires/5',
   site: 'https://himmelsweg.fr/',
   editeurSite: 'https://app.pagescms.org/',
 };

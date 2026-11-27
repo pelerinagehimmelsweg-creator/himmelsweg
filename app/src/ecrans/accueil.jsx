@@ -4,6 +4,7 @@ import { useAbonnement } from '../composants/base.jsx';
 import { JOURS, aujourdhui, droits, joursAvant, momentDu } from '../donnees/modele.js';
 import { lienCarte } from '../donnees/equipes.js';
 import { EditeurContenu, TexteAdmin, nouveau, textesDe } from './contenus.jsx';
+import { Soutien } from './soutien.jsx';
 
 const CLE_FAIT = 'himmelsweg-a-faire';
 const lireFaits = () => {
@@ -79,12 +80,16 @@ export function Accueil({ donnees, session }) {
           {!session.estAdmin && <AFaire />}
           {textes('accueil')}
           {ajouter('accueil', 'Ajouter un mot sur l’accueil')}
+          <Soutien donnees={donnees} />
         </>
       )}
+
+      {moment === 'pendant' && <Soutien donnees={donnees} />}
 
       {moment === 'apres' && (
         <>
           <p class="intro-apres">Merci d’avoir marché avec nous sur le chemin du Ciel !</p>
+          <Soutien donnees={donnees} forme="merci" />
           <a class="encart lien-encart" href="#/photos">
             <span>Les photos du pèlerinage : voir la galerie et déposer les vôtres</span>
             <span aria-hidden="true">›</span>
