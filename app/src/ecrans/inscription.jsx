@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Texte, useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
+import { AccueilInvite } from '../composants/accueil-invite.jsx';
 import logo from '../composants/logo.png';
 import { ageDe, erreursPersonne, estVisible, euros, questionsTriees, tarifsPour, totalPanier } from '../donnees/questionnaire.js';
 
@@ -78,6 +79,21 @@ function Formulaire({ donnees }) {
   const [message, setMessage] = useState('');
   const [donLibre, setDonLibre] = useState(false);
   const [invitation] = useState(lireInvitation);
+  // L'accueil animé ne se joue qu'en arrivant par le lien (pas à chaque rechargement).
+  const [accueil, setAccueil] = useState(() => {
+    if (!new URLSearchParams(location.search).get('invite')) return false;
+    try {
+      if (sessionStorage.getItem('himmelsweg-accueil-vu')) return false;
+    } catch {}
+    return true;
+  });
+  const fermerAccueil = () => {
+    try {
+      sessionStorage.setItem('himmelsweg-accueil-vu', '1');
+    } catch {}
+    setAccueil(false);
+    scrollTo(0, 0);
+  };
 
   useEffect(() => {
     try {
@@ -154,6 +170,7 @@ function Formulaire({ donnees }) {
 
   return (
     <form class="formulaire inscription" onSubmit={envoyer} noValidate>
+      {accueil && <AccueilInvite de={invitation?.de} fermer={fermerAccueil} />}
       <h1>Inscription au pèlerinage</h1>
       {invitation?.de && (
         <p class="encart invite">
