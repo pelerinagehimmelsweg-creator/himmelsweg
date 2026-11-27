@@ -2,11 +2,11 @@
 // Il applique les mêmes droits que la vraie base, pour que la démo montre ce que voit chaque rôle.
 
 import { CHAPITRES, CONTENUS, PERSONAS, dossiersExemple, membresExemple } from './exemples.js';
-import { droits, sansRolesDeChapitre } from './modele.js';
+import { droits, estChoriste, sansRolesDeChapitre } from './modele.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v3';
+const CLE = 'himmelsweg-demo-v4';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -352,10 +352,27 @@ export function creerDemo() {
     async activerNotifications() {
       return 'Notifications activées (démo).';
     },
+    // Site : en démo, on part des vrais textes du site et rien ne part sur GitHub.
+    async siteLire() {
+      exigerAdmin();
+      return (await import('./site-demo.js')).lireDemo();
+    },
+    async siteEcrire(chemin, contenu) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).ecrireDemo(chemin, contenu);
+    },
+    async sitePhoto(chemin) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).photoDemo(chemin);
+    },
+    async siteSupprimer(chemin) {
+      exigerAdmin();
+      return (await import('./site-demo.js')).supprimerDemo(chemin);
+    },
     async envoyerNotification({ cible, valeur }) {
       exigerAdmin();
       const n = etat.membres.filter(
-        (m) => m.statut !== 'en_attente' && (cible === 'tous' || (cible === 'chapitre' && m.chapitre === valeur) || (cible === 'role' && m.roles?.includes(valeur))),
+        (m) => m.statut !== 'en_attente' && (cible === 'tous' || (cible === 'chapitre' && m.chapitre === valeur) || (cible === 'role' && (m.roles?.includes(valeur) || (valeur === 'chorale' && estChoriste(m))))),
       ).length;
       return { envoyes: n, demo: true };
     },

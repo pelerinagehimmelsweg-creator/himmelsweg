@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // et continue de fonctionner sans réseau (fichiers gardés par le service worker).
 export default defineConfig({
   build: { chunkSizeWarningLimit: 800 },
+  // La démo de l'éditeur du site lit les textes du site (dossier voisin).
+  server: { fs: { allow: ['..'] } },
   plugins: [
     preact(),
     VitePWA({

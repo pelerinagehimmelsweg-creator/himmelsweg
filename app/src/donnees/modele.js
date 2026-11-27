@@ -14,6 +14,9 @@ export const nomRole = (id) => ROLES.find((r) => r.id === id)?.nom ?? id;
 export const ROLES_DE_CHAPITRE = ['chef', 'securite'];
 export const sansRolesDeChapitre = (roles) => (roles ?? []).filter((r) => !ROLES_DE_CHAPITRE.includes(r));
 
+/** Participe à la chorale (réponse au questionnaire, modifiable par les admins). */
+export const estChoriste = (m) => m?.reponses?.chorale === 'Oui';
+
 export const GROUPES = { H: 'Hommes', F: 'Femmes' };
 
 export const PERIODES = [

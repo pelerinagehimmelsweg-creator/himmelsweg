@@ -207,6 +207,7 @@ export const QUESTIONS_DEPART = [
   },
   { id: 'volontaireChef', systeme: true, libelle: 'Je me propose comme chef de chapitre', type: 'oui_non', obligatoire: true, visibilite: 'equipe', ordre: 30 },
   { id: 'aideLogistique', libelle: 'Je peux aider l’équipe logistique (montage, transport, installation)', type: 'oui_non', obligatoire: true, visibilite: 'equipe', groupe: 'H', ordre: 31 },
+  { id: 'chorale', systeme: true, libelle: 'Je participe à la chorale', type: 'oui_non', obligatoire: true, visibilite: 'equipe', ordre: 32 },
   { id: 'consentementSante', libelle: 'J’accepte que mes informations de santé soient connues des responsables sécurité du pèlerinage.', type: 'case', obligatoire: true, visibilite: 'sensible', ordre: 40 },
 ];
 

@@ -10,6 +10,15 @@ import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
 
+// L'éditeur du site n'est chargé que par les admins qui l'ouvrent.
+function EditeurSite(props) {
+  const [Ecran, setEcran] = useState(null);
+  useEffect(() => {
+    import('./ecrans/site.jsx').then((m) => setEcran(() => m.AdminSite));
+  }, []);
+  return Ecran ? <Ecran {...props} /> : <p class="discret">Chargement…</p>;
+}
+
 function periodeDuJour(aujourdhui = new Date().toISOString().slice(0, 10)) {
   if (aujourdhui > '2027-05-09') return 'apres';
   if (aujourdhui >= '2027-05-07') return 'pendant';
@@ -69,6 +78,8 @@ export function App({ donnees }) {
     contenu =
       sous === 'questionnaire' ? (
         <AdminQuestionnaire donnees={donnees} />
+      ) : sous === 'site' ? (
+        <EditeurSite donnees={donnees} />
       ) : sous === 'organisation' ? (
         <AdminOrganisation donnees={donnees} chapitreId={detail} />
       ) : sous === 'notification' ? (
@@ -100,7 +111,7 @@ export function App({ donnees }) {
           Hors ligne. Tout ce que vous avez déjà ouvert reste disponible, vos changements partiront au retour du réseau.
         </div>
       )}
-      <main class="page" key={session.id}>
+      <main class={`page${page === 'admin' && sous === 'site' ? ' large' : ''}`} key={session.id}>
         {contenu}
       </main>
       <nav class="onglets" aria-label="Navigation">

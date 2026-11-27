@@ -2,7 +2,7 @@ import { Fragment } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
-import { GROUPES, ROLES, age, droits, estMineur, nomRole } from '../donnees/modele.js';
+import { GROUPES, ROLES, age, droits, estChoriste, estMineur, nomRole } from '../donnees/modele.js';
 import { CHAMPS_FICHE, enTexte, erreursPersonne, estVisible, questionsTriees, reponsesDe, versFiche } from '../donnees/questionnaire.js';
 
 const enAttente = (m) => m.statut === 'en_attente';
@@ -27,6 +27,7 @@ export function ListeMembres({ donnees, session }) {
         if (!filtre) return true;
         if (filtre === 'volontaires') return m.volontaireChef && !m.roles?.includes('chef');
         if (filtre === 'mineurs') return estMineur(m);
+        if (filtre === 'chorale') return estChoriste(m);
         if (filtre === 'sans-chapitre') return !m.chapitre;
         if (filtre === 'en-attente') return enAttente(m);
         return m.roles?.includes(filtre);
@@ -88,6 +89,7 @@ export function ListeMembres({ donnees, session }) {
             </option>
           ))}
           <option value="volontaires">Volontaires chef à valider</option>
+          <option value="chorale">Chorale</option>
           <option value="mineurs">Mineurs</option>
           {d.admin && <option value="sans-chapitre">Sans chapitre</option>}
           {d.admin && <option value="en-attente">Paiement en attente</option>}
@@ -104,6 +106,7 @@ export function ListeMembres({ donnees, session }) {
                   {[nomChapitre(m.chapitre), ...(m.roles ?? []).filter((r) => r !== 'pelerin').map(nomRole)]
                     .filter(Boolean)
                     .join(' · ')}
+                  {estChoriste(m) && ' · chorale'}
                   {estMineur(m) && ' · mineur'}
                 </small>
               </span>

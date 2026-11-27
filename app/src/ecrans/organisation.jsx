@@ -1,7 +1,7 @@
 // Écran admin « Organisation » : chapitres (hommes et femmes séparés), équipes logistique et repas.
 import { useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
-import { GROUPES, ROLES_DE_CHAPITRE, sansRolesDeChapitre } from '../donnees/modele.js';
+import { GROUPES, ROLES_DE_CHAPITRE, estChoriste, sansRolesDeChapitre } from '../donnees/modele.js';
 
 const nomComplet = (m) => `${m.prenom ?? ''} ${m.nom ?? ''}`.trim();
 const initiales = (m) => `${m.prenom?.[0] ?? ''}${m.nom?.[0] ?? ''}`.toUpperCase();
@@ -89,6 +89,7 @@ export function AdminOrganisation({ donnees, chapitreId }) {
       {EQUIPES.map((e) => (
         <BlocEquipe key={e.id} equipe={e} {...{ donnees, membres: actifs, agir }} />
       ))}
+      <BlocChorale {...{ donnees, membres: actifs, agir }} />
     </>
   );
 }
@@ -192,6 +193,50 @@ function BlocEquipe({ donnees, equipe, membres, agir }) {
           agir(() => donnees.modifierMembre(id, { roles: avecRole(m, equipe.id) }), `${nomComplet(m)} ajouté${m.groupe === 'F' ? 'e' : ''} à l’${equipe.nom.toLowerCase()}.`);
         }}
       />
+    </section>
+  );
+}
+
+/** Chorale : ceux qui ont répondu « Oui » au questionnaire. L'admin peut corriger. */
+function BlocChorale({ donnees, membres, agir }) {
+  const dedans = membres.filter(estChoriste).sort(parNom);
+  const changer = (m, oui) =>
+    agir(
+      () => donnees.modifierMembre(m.id, { reponses: { ...(m.reponses ?? {}), chorale: oui ? 'Oui' : 'Non' } }),
+      oui ? `${nomComplet(m)} ajouté${m.groupe === 'F' ? 'e' : ''} à la chorale.` : `${nomComplet(m)} ne fait plus partie de la chorale.`,
+    );
+  return (
+    <section class="carte">
+      <h2>Chorale</h2>
+      <p class="discret">
+        Les pèlerins qui ont répondu « Oui » au questionnaire. {dedans.filter((m) => m.groupe === 'H').length} homme(s),{' '}
+        {dedans.filter((m) => m.groupe === 'F').length} femme(s).
+      </p>
+      {['H', 'F'].map((g) => {
+        const liste = dedans.filter((m) => m.groupe === g);
+        return (
+          liste.length > 0 && (
+            <div key={g}>
+              <h3>{GROUPES[g]}</h3>
+              <ul class="elements">
+                {liste.map((m) => (
+                  <li key={m.id}>
+                    <span class="orga-personne">
+                      <Pastille m={m} />
+                      <a href={`#/pelerins/${m.id}`}>{nomComplet(m)}</a>
+                    </span>
+                    <button type="button" class="lien-bouton danger" onClick={() => changer(m, false)}>
+                      Retirer
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        );
+      })}
+      {!dedans.length && <p class="discret">Personne pour l’instant.</p>}
+      <ChoixPersonne personnes={membres.filter((m) => !estChoriste(m))} choisir={(id) => changer(membres.find((x) => x.id === id), true)} />
     </section>
   );
 }
