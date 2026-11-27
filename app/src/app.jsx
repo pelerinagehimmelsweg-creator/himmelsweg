@@ -5,6 +5,7 @@ import { droits } from './donnees/modele.js';
 import { usePartagePosition } from './donnees/partage.js';
 import { envoyer as envoyerPhotos } from './donnees/photos.js';
 import { Photos } from './ecrans/photos.jsx';
+import { PageHelloAsso } from './ecrans/soutien.jsx';
 import { Connexion } from './ecrans/connexion.jsx';
 import { Rubrique } from './ecrans/contenus.jsx';
 import { Accueil } from './ecrans/accueil.jsx';
@@ -101,7 +102,8 @@ export function App({ donnees }) {
       ) : (
         <AdminInscriptions donnees={donnees} />
       );
-  } else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
+  } else if (page === 'boutique' || page === 'don') contenu = <PageHelloAsso donnees={donnees} quoi={page} />;
+  else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
   else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
   else if (actif === 'equipe') contenu = <Equipe donnees={donnees} session={session} sous={sous} detail={detail} />;
   else if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;

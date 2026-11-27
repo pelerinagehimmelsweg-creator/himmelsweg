@@ -378,3 +378,5 @@ a.lien-encart { text-decoration: none; cursor: pointer; flex-wrap: nowrap; }
 /* Soutenir le pèlerinage */
 .soutien-merci { border: 2px solid var(--rouge); background: #fff8f0; }
 .soutien-merci .actions .bouton { flex: 1; }
+.helloasso { display: block; width: 100%; border: 0; border-radius: var(--rayon); background: var(--blanc); margin-bottom: .6rem; }
+.lien-retour { display: inline-block; margin-bottom: .4rem; text-decoration: none; font-weight: 600; }
