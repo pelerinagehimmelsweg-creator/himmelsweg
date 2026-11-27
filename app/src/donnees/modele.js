@@ -19,11 +19,37 @@ export const estChoriste = (m) => m?.reponses?.chorale === 'Oui';
 
 export const GROUPES = { H: 'Hommes', F: 'Femmes' };
 
-export const PERIODES = [
-  { id: 'avant', nom: 'Avant', titre: 'Avant le pèlerinage' },
-  { id: 'pendant', nom: 'Pendant', titre: 'Pendant le pèlerinage' },
-  { id: 'apres', nom: 'Après', titre: 'Après le pèlerinage' },
+/** Où s'affiche un texte écrit par les admins. */
+export const RUBRIQUES = [
+  { id: 'infos', titre: 'Onglet Infos' },
+  { id: 'prier', titre: 'Onglet Prier (chants et prières)' },
+  { id: 'accueil', titre: 'Accueil : mot de l’aumônier ou de la directrice' },
+  { id: 'apres', titre: 'Accueil après le pèlerinage (merci, questionnaire…)' },
 ];
+
+/** Rubrique d'un texte (les anciens textes avaient un « moment » avant / pendant / après). */
+export function rubriqueDe(c) {
+  if (c?.rubrique) return c.rubrique;
+  if (c?.periode === 'apres') return 'apres';
+  return /chant|pri[eè]re/i.test(c?.titre ?? '') ? 'prier' : 'infos';
+}
+
+export const DATES = { debut: '2027-05-07', fin: '2027-05-09' };
+export const JOURS = { '2027-05-07': 'Vendredi 7 mai', '2027-05-08': 'Samedi 8 mai', '2027-05-09': 'Dimanche 9 mai' };
+
+/** Date du jour à Strasbourg, au format 2027-05-07. */
+export const aujourdhui = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+
+/** avant / pendant / apres le pèlerinage. */
+export function momentDu(jour = aujourdhui()) {
+  if (jour > DATES.fin) return 'apres';
+  return jour >= DATES.debut ? 'pendant' : 'avant';
+}
+
+/** Nombre de jours avant le départ. */
+export function joursAvant(jour = aujourdhui()) {
+  return Math.round((Date.parse(DATES.debut) - Date.parse(jour)) / 86400000);
+}
 
 export const LIENS = {
   boutique: 'https://himmelsweg.fr/boutique/',

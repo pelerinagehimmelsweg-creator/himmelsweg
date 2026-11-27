@@ -111,7 +111,16 @@ export const PERSONAS = [
 
 export const CONTENUS = [
   {
+    id: 'c-mot',
+    rubrique: 'accueil',
+    periode: 'avant',
+    ordre: 0,
+    titre: 'Le mot de l’aumônier',
+    texte: 'Merci de vous être inscrit ! Dès maintenant, confions ce pèlerinage à Notre-Dame et à sainte Odile. Texte à compléter par l’aumônier.',
+  },
+  {
     id: 'c-affaires',
+    rubrique: 'infos',
     periode: 'avant',
     ordre: 1,
     titre: 'Liste d’affaires',
@@ -120,6 +129,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-horaires',
+    rubrique: 'infos',
     periode: 'avant',
     ordre: 2,
     titre: 'Horaires',
@@ -128,6 +138,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-transport',
+    rubrique: 'infos',
     periode: 'avant',
     ordre: 3,
     titre: 'Transport',
@@ -135,6 +146,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-spirituel',
+    rubrique: 'infos',
     periode: 'avant',
     ordre: 4,
     titre: 'Préparation spirituelle',
@@ -142,6 +154,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-urgence',
+    rubrique: 'infos',
     periode: 'pendant',
     ordre: 1,
     titre: 'Numéros d’urgence',
@@ -150,6 +163,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-chants',
+    rubrique: 'prier',
     periode: 'pendant',
     ordre: 2,
     titre: 'Chants et prières',
@@ -157,6 +171,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-merci',
+    rubrique: 'apres',
     periode: 'apres',
     ordre: 1,
     titre: 'Merci !',
@@ -164,6 +179,7 @@ export const CONTENUS = [
   },
   {
     id: 'c-questionnaire',
+    rubrique: 'apres',
     periode: 'apres',
     ordre: 2,
     titre: 'Questionnaire de satisfaction',

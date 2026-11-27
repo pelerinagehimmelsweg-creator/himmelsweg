@@ -31,6 +31,7 @@ import {
 } from 'firebase/firestore';
 import { REPAS_CONFIG_DEPART, texteAlerte } from './equipes.js';
 import { droits, sansRolesDeChapitre } from './modele.js';
+import { CONTENUS } from './exemples.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART } from './questionnaire.js';
 
 export function creerFirebase(config, urlScript, cleVapid) {
@@ -76,6 +77,12 @@ export function creerFirebase(config, urlScript, cleVapid) {
 
   // Première connexion d'un admin : on installe le questionnaire et les tarifs de départ.
   async function installerQuestionnaire() {
+    // Textes de départ des onglets Accueil, Infos et Prier, si aucun texte n'existe encore.
+    if ((await getDocs(query(collection(db, 'contenus')))).empty) {
+      const lot = writeBatch(db);
+      CONTENUS.forEach(({ id, ...c }) => lot.set(doc(db, 'contenus', id), c));
+      await lot.commit();
+    }
     if ((await getDoc(doc(db, 'config', 'inscription'))).exists()) {
       // Questions de base ajoutées après l'installation (ex. chorale) : on les crée si elles manquent.
       for (const { id, ...q } of QUESTIONS_DEPART.filter((x) => x.systeme)) {
@@ -326,7 +333,16 @@ export function creerFirebase(config, urlScript, cleVapid) {
       await setDoc(doc(db, 'membres', ref.id, 'prive', 'fiche'), prive ?? {});
       return ref.id;
     },
-    modifierMembre: (id, champs) => updateDoc(doc(db, 'membres', id), champs),
+    // Quand le chef d'un chapitre change, son nom est recopié sur le chapitre pour les pèlerins.
+    async modifierMembre(id, champs) {
+      const avant = 'roles' in champs || 'chapitre' in champs ? (await getDoc(doc(db, 'membres', id))).data() : null;
+      await updateDoc(doc(db, 'membres', id), champs);
+      if (!avant) return;
+      for (const ch of new Set([avant.chapitre, 'chapitre' in champs ? champs.chapitre : avant.chapitre].filter(Boolean))) {
+        const chef = (await getDocs(query(collection(db, 'membres'), where('chapitre', '==', ch)))).docs.map((d) => d.data()).find((m) => m.roles?.includes('chef'));
+        await updateDoc(doc(db, 'chapitres', ch), { chef: chef ? `${chef.prenom ?? ''} ${chef.nom ?? ''}`.trim() : null }).catch(() => {});
+      }
+    },
     // Le pèlerin corrige ses réponses (la base n'autorise que ces champs-là).
     async modifierMesReponses(id, champs, prive) {
       await updateDoc(doc(db, 'membres', id), champs);

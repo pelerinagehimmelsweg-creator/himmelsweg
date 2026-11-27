@@ -71,8 +71,9 @@ service cloud.firestore {
       allow write: if false;
     }
     // Parcours : lu par la logistique, les chefs et les adjoints sécurité, écrit par la logistique.
+    // Le parcours s'affiche sur l'accueil de chaque pèlerin pendant le pèlerinage (étape du jour).
     match /parcours/{id} {
-      allow read: if equipe('logistique') || aRole('chef') || aRole('securite');
+      allow read: if equipe('logistique') || jeSuisMembre();
       allow write: if equipe('logistique');
     }
     match /prevoyance/{id} {

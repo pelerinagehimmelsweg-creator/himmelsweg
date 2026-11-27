@@ -6,7 +6,7 @@ import { droits, estChoriste, sansRolesDeChapitre } from './modele.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v4';
+const CLE = 'himmelsweg-demo-v5';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -179,7 +179,15 @@ export function creerDemo() {
       sauver();
     },
 
-    ecouterChapitres: (cb) => ecouter(() => (session() ? etat.chapitres : []), cb),
+    // Le nom du chef est recopié sur le chapitre (les pèlerins ne lisent pas les fiches des autres).
+    ecouterChapitres: (cb) =>
+      ecouter(() => {
+        if (!session()) return [];
+        return etat.chapitres.map((c) => {
+          const chef = etat.membres.find((m) => m.chapitre === c.id && m.roles?.includes('chef'));
+          return { ...c, chef: chef ? `${chef.prenom} ${chef.nom}` : null };
+        });
+      }, cb),
     async enregistrerChapitre({ id, ...c }) {
       exigerAdmin();
       const cle = id || `ch-${Date.now().toString(36)}`;

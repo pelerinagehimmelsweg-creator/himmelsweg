@@ -90,10 +90,6 @@ export function Moi({ donnees, session }) {
         </section>
       )}
 
-      {!session.estAdmin && session.statut === 'en_attente' && (
-        <p class="encart">Votre inscription attend encore son paiement. Le secrétariat vous a envoyé le lien par e-mail.</p>
-      )}
-
       {!session.estAdmin && prive && !prive.refuse && (
         <section class="carte">
           <h2>Mes informations</h2>

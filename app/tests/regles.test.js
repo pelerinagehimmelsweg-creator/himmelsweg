@@ -155,13 +155,14 @@ test('repas : l’équipe repas voit les quantités et le nombre par régime, pa
   await assertFails(getDoc(doc(membre('pelA'), 'stats/repas')));
 });
 
-test('logistique : parcours et prévoyance ; les chefs lisent le parcours sans le modifier', async () => {
+test('logistique : parcours et prévoyance ; chefs et pèlerins lisent le parcours sans le modifier', async () => {
   await assertSucceeds(setDoc(doc(membre('logi'), 'parcours/e2'), { titre: 'Arrivée' }));
   await assertSucceeds(setDoc(doc(membre('logi'), 'prevoyance/p2'), { objet: 'Trousses' }));
   await assertSucceeds(getDoc(doc(membre('chefA'), 'parcours/e1')));
   await assertFails(setDoc(doc(membre('chefA'), 'parcours/e1'), { titre: 'x' }));
   await assertFails(getDoc(doc(membre('chefA'), 'prevoyance/p1')));
-  await assertFails(getDoc(doc(membre('pelA'), 'parcours/e1')));
+  await assertSucceeds(getDoc(doc(membre('pelA'), 'parcours/e1')));
+  await assertFails(setDoc(doc(membre('pelA'), 'parcours/e1'), { titre: 'x' }));
 });
 
 test('discussions : chacun son équipe, messages signés', async () => {
