@@ -293,6 +293,37 @@ export function creerFirebase(config, urlScript, cleVapid) {
           : query(c, where('statut', '==', quoi === 'galerie' ? 'publiee' : 'a_trier'), orderBy(documentId()), limit(n));
       return liste(q, (l) => cb(l.sort((a, b) => a.id.localeCompare(b.id)).slice(0, n)));
     },
+    // Questionnaire de fin : questions et ouverture dans config/bilan, réponses dans bilan/{id},
+    // « a répondu » dans bilanFait/{uid}. Réponse anonyme : identifiant tiré au hasard, sans nom.
+    ecouterConfigBilan: (cb) =>
+      onSnapshot(
+        doc(db, 'config', 'bilan'),
+        (d) => cb(d.data() ?? {}),
+        () => cb({}),
+      ),
+    enregistrerConfigBilan: (c) => setDoc(doc(db, 'config', 'bilan'), c, { merge: true }),
+    ecouterMonBilan: (cb) => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return cb(false), () => {};
+      return onSnapshot(
+        doc(db, 'bilanFait', uid),
+        (d) => cb(d.exists()),
+        () => cb(false),
+      );
+    },
+    async envoyerBilan(r) {
+      const uid = auth.currentUser.uid;
+      const id = r.anonyme ? Array.from(crypto.getRandomValues(new Uint8Array(12)), (o) => o.toString(16).padStart(2, '0')).join('') : uid;
+      const lot = writeBatch(db);
+      lot.set(doc(db, 'bilan', id), r);
+      lot.set(doc(db, 'bilanFait', uid), { jour: r.jour });
+      // Sans réseau, l'envoi part tout seul au retour du réseau : on n'attend pas plus de quelques secondes.
+      const envoi = lot.commit();
+      await Promise.race([envoi, new Promise((ok) => setTimeout(ok, 3000))]);
+    },
+    ecouterBilans: (cb) => liste(collection(db, 'bilan'), cb),
+    ecouterBilansFaits: (cb) => liste(collection(db, 'bilanFait'), cb),
+    retenirTemoignage: (id, retenu) => updateDoc(doc(db, 'bilan', id), { retenu }),
     siteLire: async () => script('site', { op: 'lire', idToken: await auth.currentUser.getIdToken() }),
     siteEcrire: async (chemin, contenu, sha) => script('site', { op: 'ecrire', idToken: await auth.currentUser.getIdToken(), chemin, contenu, sha }),
     sitePhoto: async (chemin, base64) => script('site', { op: 'photo', idToken: await auth.currentUser.getIdToken(), chemin, base64 }),

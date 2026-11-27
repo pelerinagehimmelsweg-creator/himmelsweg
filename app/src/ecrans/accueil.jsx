@@ -5,6 +5,7 @@ import { JOURS, aujourdhui, droits, joursAvant, momentDu } from '../donnees/mode
 import { lienCarte } from '../donnees/equipes.js';
 import { EditeurContenu, TexteAdmin, nouveau, textesDe } from './contenus.jsx';
 import { CarteInviter, Soutien } from './soutien.jsx';
+import { CarteBilan } from './bilan.jsx';
 
 const CLE_FAIT = 'himmelsweg-a-faire';
 const lireFaits = () => {
@@ -70,6 +71,8 @@ export function Accueil({ donnees, session }) {
           à <a href="mailto:secretariat@himmelsweg.fr">secretariat@himmelsweg.fr</a>.
         </p>
       )}
+
+      {(moment !== 'avant' || donnees.mode === 'demo') && <CarteBilan donnees={donnees} session={session} force={apercu === 'apres' && d.admin} />}
 
       {moment === 'pendant' && <Pendant donnees={donnees} contenus={contenus} />}
 

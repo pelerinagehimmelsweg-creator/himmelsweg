@@ -2,7 +2,7 @@
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'node:fs';
 import { after, before, test } from 'node:test';
-import { collection, deleteDoc, doc, documentId, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, documentId, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 let env;
 
@@ -244,4 +244,39 @@ test('jetons de notification et numéro d’alerte', async () => {
   await assertSucceeds(getDoc(doc(membre('pelA'), 'config/app')));
   await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'config/app')));
   await assertFails(setDoc(doc(membre('logi'), 'config/app'), { smsAlerte: '07' }));
+});
+
+test('questionnaire de fin : une réponse par participant, anonyme possible, lue par les admins seuls', async () => {
+  const repondre = (db, uid, id, r) => {
+    const lot = writeBatch(db);
+    lot.set(doc(db, 'bilan', id), { reponses: { organisation: 5 }, groupe: 'F', jour: '2027-05-10', ...r });
+    lot.set(doc(db, 'bilanFait', uid), { jour: '2027-05-10' });
+    return lot.commit();
+  };
+  // Nominatif : l'identifiant est celui du participant.
+  await assertFails(repondre(membre('pelB'), 'pelB', 'pelA', { anonyme: false, auteur: 'pelA', nom: 'A' }));
+  await assertSucceeds(repondre(membre('pelB'), 'pelB', 'pelB', { anonyme: false, auteur: 'pelB', nom: 'B' }));
+  // Une seule fois.
+  await assertFails(repondre(membre('pelB'), 'pelB', 'xyz', { anonyme: true }));
+  // Anonyme : ni auteur ni nom.
+  await assertFails(repondre(membre('chefA'), 'chefA', 'anon1', { anonyme: true, nom: 'Chef' }));
+  await assertSucceeds(repondre(membre('chefA'), 'chefA', 'anon1', { anonyme: true, temoignage: 'Merci', publier: true, signature: 'Un pèlerin' }));
+  // Sans la marque « a répondu », pas de réponse (sinon on pourrait répondre plusieurs fois anonymement).
+  await assertFails(setDoc(doc(membre('secuA'), 'bilan/anon2'), { reponses: {}, anonyme: true }));
+  // On ne se retient pas soi-même, on ne lit pas les réponses.
+  await assertFails(repondre(membre('logi'), 'logi', 'logi', { anonyme: false, auteur: 'logi', retenu: true }));
+  await assertFails(getDoc(doc(membre('pelB'), 'bilan/pelB')));
+  await assertFails(getDocs(collection(membre('chefA'), 'bilan')));
+  await assertSucceeds(getDoc(doc(membre('pelB'), 'bilanFait/pelB')));
+  await assertFails(getDoc(doc(membre('pelB'), 'bilanFait/chefA')));
+  await assertFails(repondre(intrus(), 'autre-uid', 'autre-uid', { anonyme: false, auteur: 'autre-uid' }));
+  // Les admins lisent tout et retiennent un témoignage, sans changer la réponse.
+  await assertSucceeds(getDocs(collection(admin(), 'bilan')));
+  await assertSucceeds(getDocs(collection(admin(), 'bilanFait')));
+  await assertSucceeds(updateDoc(doc(admin(), 'bilan/anon1'), { retenu: true }));
+  await assertFails(updateDoc(doc(admin(), 'bilan/anon1'), { temoignage: 'autre' }));
+  // Config du questionnaire : lue par les participants, écrite par les admins.
+  await assertSucceeds(setDoc(doc(admin(), 'config/bilan'), { ouverture: 'auto' }));
+  await assertSucceeds(getDoc(doc(membre('pelB'), 'config/bilan')));
+  await assertFails(setDoc(doc(membre('pelB'), 'config/bilan'), { ouverture: 'ouvert' }));
 });

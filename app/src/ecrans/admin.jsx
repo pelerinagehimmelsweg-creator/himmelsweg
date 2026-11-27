@@ -325,13 +325,14 @@ function Reglages({ donnees, config, setMsg }) {
   );
 }
 
-function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer }) {
+export function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer, types = TYPES, bilan = false }) {
   const [q, setQ] = useState(() => ({ groupe: 'tous', ...structuredClone(question), options: question.options ?? [] }));
   const [erreur, setErreur] = useState('');
   const maj = (champs) => setQ({ ...q, ...champs });
   const avecOptions = q.type === 'choix' || q.type === 'choix_multiples';
   const avecTexte = q.type === 'info' || q.type === 'signature' || q.type === 'case';
   const autres = questions.filter((x) => x.id !== q.id && ['choix', 'choix_multiples', 'oui_non', 'case'].includes(x.type));
+  const conditions = bilan ? CONDITIONS.filter((c) => c.id === '' || c.id === 'reponse') : CONDITIONS;
   const source = autres.find((x) => x.id === q.condition?.question);
   const valeursSource = source ? (source.type === 'oui_non' ? ['Oui', 'Non'] : source.type === 'case' ? [] : source.options ?? []) : [];
 
@@ -363,7 +364,7 @@ function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer }
       <label class="champ">
         <span class="libelle">Type de réponse</span>
         <select value={q.type} disabled={q.systeme} onChange={(e) => maj({ type: e.currentTarget.value })}>
-          {TYPES.map((t) => (
+          {types.map((t) => (
             <option key={t.id} value={t.id}>
               {t.nom}
             </option>
@@ -371,7 +372,7 @@ function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer }
         </select>
       </label>
       <label class="champ">
-        <span class="libelle">{q.type === 'info' ? 'Titre (facultatif)' : q.type === 'case' ? 'Phrase à cocher' : 'Question'}</span>
+        <span class="libelle">{q.type === 'info' ? 'Titre (facultatif)' : q.type === 'note' ? 'Ce qui est noté' : q.type === 'case' ? 'Phrase à cocher' : 'Question'}</span>
         <input value={q.libelle} onInput={(e) => maj({ libelle: e.currentTarget.value })} />
       </label>
       {avecTexte && (
@@ -399,7 +400,7 @@ function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer }
         </label>
       )}
 
-      {q.type !== 'info' && (
+      {q.type !== 'info' && !bilan && (
         <fieldset class="champ">
           <legend class="libelle">Qui voit la réponse ?</legend>
           <div class="pilules">
@@ -437,7 +438,7 @@ function EditeurQuestion({ question, questions, fermer, enregistrer, supprimer }
         <label class="champ">
           <span class="libelle">Quand poser la question ?</span>
           <select value={q.condition?.type ?? ''} onChange={(e) => maj({ condition: { type: e.currentTarget.value } })}>
-            {CONDITIONS.map((c) => (
+            {conditions.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nom}
               </option>

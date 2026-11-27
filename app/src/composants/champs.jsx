@@ -61,6 +61,34 @@ export function ChampQuestion({ q, valeur, changer, erreur, verrouille = false, 
       </div>
     );
   }
+  if (q.type === 'note') {
+    return (
+      <fieldset class={`champ${erreur ? ' en-erreur' : ''}`} data-champ={q.id}>
+        <legend class="libelle">
+          {q.libelle}
+          {etoile}
+        </legend>
+        {aide}
+        <div class="etoiles" role="radiogroup">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              type="button"
+              role="radio"
+              aria-checked={valeur === n}
+              aria-label={`${n} sur 5`}
+              class={valeur >= n ? 'pleine' : ''}
+              disabled={verrouille}
+              onClick={() => changer(valeur === n ? null : n)}
+            >
+              ★
+            </button>
+          ))}
+        </div>
+        {err}
+      </fieldset>
+    );
+  }
   if (q.type === 'oui_non' || q.type === 'choix' || q.type === 'choix_multiples') {
     const options = q.type === 'oui_non' ? ['Oui', 'Non'] : (q.options ?? []);
     const multiple = q.type === 'choix_multiples';
