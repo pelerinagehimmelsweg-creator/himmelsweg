@@ -198,18 +198,40 @@ function nouveauPaiement_(ref, dossier) {
     payer: { firstName: dossier.payeur.prenom, lastName: dossier.payeur.nom, email: dossier.payeur.email },
     metadata: { ref },
   };
-  const rep = UrlFetchApp.fetch(`${API_HELLOASSO}/v5/organizations/${encodeURIComponent(org)}/checkout-intents`, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + jetonHelloAsso_() },
-    payload: JSON.stringify(corps),
-    muteHttpExceptions: true,
-  });
-  if (rep.getResponseCode() !== 200) throw new Error('HelloAsso refuse le paiement (' + rep.getResponseCode() + ') : ' + rep.getContentText().slice(0, 300));
+  const envoyer = () =>
+    UrlFetchApp.fetch(`${API_HELLOASSO}/v5/organizations/${encodeURIComponent(org)}/checkout-intents`, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + jetonHelloAsso_() },
+      payload: JSON.stringify(corps),
+      muteHttpExceptions: true,
+    });
+  let rep = envoyer();
+  // HelloAsso refuse certains noms (« test », prénom = nom, chiffres…) : on le laisse alors demander le payeur sur sa page.
+  if (rep.getResponseCode() === 400 && corps.payer) {
+    console.error('HelloAsso refuse le payeur, nouvel essai sans : ' + rep.getContentText().slice(0, 500));
+    delete corps.payer;
+    rep = envoyer();
+  }
+  if (rep.getResponseCode() !== 200) {
+    console.error('HelloAsso refuse le paiement (' + rep.getResponseCode() + ') : ' + rep.getContentText().slice(0, 1000));
+    throw refus_('HelloAsso refuse de préparer le paiement' + messageHelloAsso_(rep) + '. Votre inscription est enregistrée : le secrétariat vous recontacte, ou réessayez plus tard.');
+  }
   const intention = JSON.parse(rep.getContentText());
   const anciens = (dossier.paiements || []).concat(dossier.checkoutId ? [dossier.checkoutId] : []);
   modifier_('dossiers/' + ref, { checkoutId: String(intention.id), paiements: anciens.map(String) });
   return intention.redirectUrl;
+}
+
+/** Message d'erreur lisible renvoyé par HelloAsso, s'il y en a un. */
+function messageHelloAsso_(rep) {
+  try {
+    const j = JSON.parse(rep.getContentText());
+    const m = (j.errors || []).map((e) => e.message).filter(Boolean).join(' ; ') || j.message || '';
+    return m ? ' (' + String(m).slice(0, 200) + ')' : ' (code ' + rep.getResponseCode() + ')';
+  } catch (e) {
+    return ' (code ' + rep.getResponseCode() + ')';
+  }
 }
 
 /** Nouveau lien de paiement pour une inscription en attente (bouton « Payer » ou e-mail de relance). */

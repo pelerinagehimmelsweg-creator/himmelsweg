@@ -65,6 +65,8 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
     if (url.endsWith('oauth2.googleapis.com/token')) return rep(200, { access_token: 'g' });
     if (url.endsWith('api.helloasso.com/oauth2/token')) return rep(200, { access_token: 'h', expires_in: 1800 });
     if (url.endsWith('/checkout-intents') && opts.method === 'post') {
+      const p = JSON.parse(opts.payload).payer;
+      if (p && (p.firstName === p.lastName || /^test$/i.test(p.lastName))) return rep(400, { errors: [{ code: 'ArgumentInvalid', message: 'Le nom du payeur est invalide.' }] });
       const id = 1000 + intentions.length;
       intentions.push({ id, corps: JSON.parse(opts.payload) });
       return rep(200, { id, redirectUrl: `https://www.helloasso.com/paiement/${id}` });
@@ -496,4 +498,12 @@ test('site : message clair si la clé GitHub manque ou est refusée', () => {
   assert.match(sans.appeler({ action: 'site', op: 'lire', idToken: 'jeton-admin' }).erreur, /GITHUB_CLE/);
   const fausse = charger({ base: EQUIPE, sessions: SESSIONS, depot: DEPOT, proprietes: { GITHUB_CLE: 'perimee' } });
   assert.match(fausse.appeler({ action: 'site', op: 'lire', idToken: 'jeton-admin' }).erreur, /clé GitHub est refusée/);
+});
+
+test('HelloAsso refuse le nom du payeur (« test test ») : le paiement se prépare quand même, sans payeur', () => {
+  const s = charger({ base: BASE_DEPART });
+  const r = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: { prenom: 'Test', nom: 'test', email: 'test@exemple.fr' }, don: 0, reglement: true });
+  assert.ok(r.redirectUrl, JSON.stringify(r));
+  assert.equal(s.intentions.length, 1);
+  assert.equal(s.intentions[0].corps.payer, undefined);
 });
