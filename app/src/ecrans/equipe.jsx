@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { droits } from '../donnees/modele.js';
 import { FILS, UNITES, filsDe, lienCarte, lienSms, listeDeCourses } from '../donnees/equipes.js';
+import { MODELES_NOTIFICATION, notificationAffichee, quandNotification } from '../donnees/notifications.js';
+import { Banniere } from '../composants/banniere.jsx';
 
 const a = (session, ...roles) => session.estAdmin || roles.some((r) => session.roles?.includes(r));
 export const aDesOutils = (session) => a(session, 'repas', 'logistique', 'chef', 'securite');
@@ -671,7 +673,9 @@ function Alertes({ donnees, session }) {
 
 export function EnvoiNotification({ donnees }) {
   const chapitres = useAbonnement((cb) => donnees.ecouterChapitres(cb), [donnees], []);
-  const [f, setF] = useState({ cible: 'tous', valeur: '', titre: '', texte: '' });
+  const programmees = useAbonnement((cb) => donnees.ecouterProgrammees(cb), [donnees], []);
+  const [f, setF] = useState({ cible: 'tous', valeur: '', titre: '', texte: '', modele: 'annonce', quand: 'maintenant', le: '' });
+  const [vue, setVue] = useState('android');
   const [etat, setEtat] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const ROLES_CIBLES = [
@@ -681,24 +685,37 @@ export function EnvoiNotification({ donnees }) {
     ['repas', 'Équipe repas'],
     ['chorale', 'Chorale'],
   ];
+  const n = notificationAffichee(f);
+  const nomCible = (p) =>
+    p.cible === 'tous' ? 'Tous les inscrits' : p.cible === 'moi' ? 'Moi (essai)' : p.cible === 'chapitre' ? (chapitres.find((c) => c.id === p.valeur)?.nom ?? 'Un chapitre') : (ROLES_CIBLES.find(([v]) => v === p.valeur)?.[1] ?? p.valeur);
   const envoyer = async (e) => {
     e.preventDefault();
     if (!f.titre.trim() || !f.texte.trim()) return setEtat('Écrivez un titre et un message.');
-    if (f.cible !== 'tous' && !f.valeur) return setEtat('Choisissez à qui envoyer.');
+    if (f.cible === 'chapitre' || f.cible === 'role') if (!f.valeur) return setEtat('Choisissez à qui envoyer.');
+    const message = { cible: f.cible, valeur: f.valeur, titre: f.titre.trim(), texte: f.texte.trim(), modele: f.modele };
     setEnvoi(true);
     try {
-      const r = await donnees.envoyerNotification(f);
-      setEtat(
-        r.demo
-          ? `Démo : le message partirait vers ${r.envoyes} personne${r.envoyes > 1 ? 's' : ''}.`
-          : `Envoyé sur ${r.envoyes} téléphone${r.envoyes > 1 ? 's' : ''}.${r.sansNotification ? ` ${r.sansNotification} personne${r.sansNotification > 1 ? 's n’ont' : ' n’a'} pas activé les notifications.` : ''}`,
-      );
+      if (f.quand === 'programmer') {
+        const le = new Date(f.le);
+        if (!f.le || isNaN(le) || le < Date.now()) throw new Error('Choisissez une date et une heure à venir.');
+        await donnees.programmerNotification({ ...message, le: le.toISOString() });
+        setEtat(`Programmée pour ${quandNotification(le.toISOString())}. Elle partira à 15 minutes près.`);
+      } else {
+        const r = await donnees.envoyerNotification(message);
+        setEtat(
+          r.demo
+            ? `Démo : le message partirait vers ${r.envoyes} personne${r.envoyes > 1 ? 's' : ''}. La bannière en haut montre ce que voient ceux qui ont l’app ouverte.`
+            : `Envoyé sur ${r.envoyes} téléphone${r.envoyes > 1 ? 's' : ''}.${r.sansNotification ? ` ${r.sansNotification} personne${r.sansNotification > 1 ? 's n’ont' : ' n’a'} pas activé les notifications.` : ''}`,
+        );
+      }
       setF({ ...f, titre: '', texte: '' });
     } catch (er) {
       setEtat(er.message);
     }
     setEnvoi(false);
   };
+  const aVenir = programmees.filter((p) => !p.envoyee).sort((a, b) => a.le.localeCompare(b.le));
+  const parties = programmees.filter((p) => p.envoyee).sort((a, b) => b.le.localeCompare(a.le)).slice(0, 5);
   return (
     <form class="formulaire" onSubmit={envoyer}>
       <a class="retour" href="#/moi">
@@ -707,6 +724,22 @@ export function EnvoiNotification({ donnees }) {
       <h1>Envoyer une notification</h1>
       <p class="discret">Le message s’affiche sur les téléphones qui ont activé les notifications. Il n’est pas gardé dans l’app.</p>
       {etat && <p class="info">{etat}</p>}
+
+      <fieldset class="champ">
+        <legend class="libelle">Modèle</legend>
+        <div class="modeles-notif">
+          {Object.entries(MODELES_NOTIFICATION).map(([id, m]) => (
+            <label key={id} class={f.modele === id ? 'choisi' : ''}>
+              <input type="radio" name="modele" checked={f.modele === id} onChange={() => setF({ ...f, modele: id })} />
+              <span class="mn-photo" style={{ backgroundImage: `url(/notifications/${id}.jpg)` }} />
+              <span class="mn-nom">
+                {m.symbole} {m.nom}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div class="deux">
         <label>
           À qui ?
@@ -714,9 +747,10 @@ export function EnvoiNotification({ donnees }) {
             <option value="tous">Tous les inscrits</option>
             <option value="chapitre">Un chapitre</option>
             <option value="role">Une équipe</option>
+            <option value="moi">Moi seulement (essai)</option>
           </select>
         </label>
-        {f.cible !== 'tous' && (
+        {(f.cible === 'chapitre' || f.cible === 'role') && (
           <label>
             {f.cible === 'chapitre' ? 'Chapitre' : 'Équipe'}
             <select value={f.valeur} onChange={(e) => setF({ ...f, valeur: e.currentTarget.value })}>
@@ -736,18 +770,138 @@ export function EnvoiNotification({ donnees }) {
           </label>
         )}
       </div>
+      {f.cible === 'moi' && <small class="aide">Pour voir le rendu sur votre téléphone : activez d’abord les notifications dans Moi.</small>}
       <label>
         Titre
-        <input maxLength="80" value={f.titre} onInput={(e) => setF({ ...f, titre: e.currentTarget.value })} placeholder="Ex. : Départ demain" />
+        <input maxLength="60" value={f.titre} onInput={(e) => setF({ ...f, titre: e.currentTarget.value })} placeholder="Ex. : Rendez-vous à 7 h 30" />
       </label>
       <label>
         Message
-        <textarea rows="4" maxLength="500" value={f.texte} onInput={(e) => setF({ ...f, texte: e.currentTarget.value })} />
+        <textarea rows="3" maxLength="300" value={f.texte} onInput={(e) => setF({ ...f, texte: e.currentTarget.value })} />
       </label>
+
+      <section class="apercu-notif">
+        <div class="onglets-internes" role="tablist">
+          {[
+            ['android', 'Android'],
+            ['iphone', 'iPhone'],
+            ['app', 'App ouverte'],
+          ].map(([v, t]) => (
+            <button key={v} type="button" role="tab" aria-selected={vue === v} class={vue === v ? 'actif' : ''} onClick={() => setVue(v)}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <ApercuNotification n={{ ...n, titre: f.titre || 'Votre titre', texte: f.texte || 'Votre message s’affichera ici.' }} vue={vue} />
+      </section>
+
+      <fieldset class="champ">
+        <legend class="libelle">Quand ?</legend>
+        <div class="pilules">
+          {[
+            ['maintenant', 'Maintenant'],
+            ['programmer', 'Programmer'],
+          ].map(([v, t]) => (
+            <label key={v} class={f.quand === v ? 'choisi' : ''}>
+              <input type="radio" name="quand" checked={f.quand === v} onChange={() => setF({ ...f, quand: v })} />
+              {t}
+            </label>
+          ))}
+        </div>
+        {f.quand === 'programmer' && (
+          <input type="datetime-local" value={f.le} onInput={(e) => setF({ ...f, le: e.currentTarget.value })} aria-label="Date et heure d’envoi" />
+        )}
+      </fieldset>
       <button class="bouton" disabled={envoi}>
-        {envoi ? 'Envoi…' : 'Envoyer'}
+        {envoi ? 'Envoi…' : f.quand === 'programmer' ? 'Programmer' : 'Envoyer'}
       </button>
+
+      {aVenir.length > 0 && (
+        <section class="carte programmees">
+          <h2>Programmées</h2>
+          <ul>
+            {aVenir.map((p) => (
+              <li key={p.id}>
+                <span>
+                  <strong>
+                    {MODELES_NOTIFICATION[p.modele]?.symbole} {p.titre}
+                  </strong>
+                  <small>
+                    {quandNotification(p.le)} · {nomCible(p)}
+                  </small>
+                </span>
+                <button type="button" class="lien-bouton danger" onClick={() => confirm('Annuler cette notification ?') && donnees.annulerProgrammee(p.id)}>
+                  Annuler
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {parties.length > 0 && (
+        <section class="carte programmees">
+          <h2>Déjà parties</h2>
+          <ul>
+            {parties.map((p) => (
+              <li key={p.id}>
+                <span>
+                  <strong>
+                    {MODELES_NOTIFICATION[p.modele]?.symbole} {p.titre}
+                  </strong>
+                  <small>
+                    {quandNotification(p.le)} · {nomCible(p)}
+                    {p.envoyes != null ? ` · ${p.envoyes} téléphone${p.envoyes > 1 ? 's' : ''}` : ''}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </form>
+  );
+}
+
+/** Aperçu de la notification, comme sur un téléphone. */
+function ApercuNotification({ n, vue }) {
+  if (vue === 'app') return <div class="ecran-apercu clair"><Banniere n={n} apercu /></div>;
+  if (vue === 'iphone') {
+    return (
+      <div class="ecran-apercu" style={{ backgroundImage: `url(${n.image})` }}>
+        <div class="notif-ios">
+          <img src="/icone-192.png" alt="" />
+          <div>
+            <small>maintenant</small>
+            <strong>
+              {n.symbole} {n.titre}
+            </strong>
+            <span>{n.texte}</span>
+          </div>
+        </div>
+        <p class="apercu-note">Sur iPhone, Apple n’affiche que l’icône, le titre et le texte.</p>
+      </div>
+    );
+  }
+  return (
+    <div class="ecran-apercu" style={{ backgroundImage: `url(${n.image})` }}>
+      <div class="notif-android">
+        <div class="na-tete">
+          <img src="/notifications/badge.png" alt="" />
+          Himmelsweg · maintenant
+        </div>
+        <strong>
+          {n.symbole} {n.titre}
+        </strong>
+        <span>{n.texte}</span>
+        <div class="na-photo" style={{ backgroundImage: `url(${n.image})` }} />
+        {n.lien !== '/#/' && (
+          <div class="na-actions">
+            <span>{n.bouton}</span>
+            <span>Ouvrir</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -7,7 +7,7 @@ import { REPERES_EXEMPLE, TRACES_EXEMPLE } from './carte.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v8';
+const CLE = 'himmelsweg-demo-v9';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -61,6 +61,7 @@ function lireEtat() {
     alertes: [],
     photos: [],
     configBilan: {},
+    programmees: [],
     ...bilanExemple(membres),
   };
 }
@@ -462,12 +463,25 @@ export function creerDemo() {
       exigerAdmin();
       return (await import('./site-demo.js')).supprimerDemo(chemin);
     },
-    async envoyerNotification({ cible, valeur }) {
+    async envoyerNotification({ cible, valeur, titre, texte, modele }) {
       exigerAdmin();
       const n = etat.membres.filter(
         (m) => m.statut !== 'en_attente' && (cible === 'tous' || (cible === 'chapitre' && m.chapitre === valeur) || (cible === 'role' && (m.roles?.includes(valeur) || (valeur === 'chorale' && estChoriste(m))))),
       ).length;
-      return { envoyes: n, demo: true };
+      // Démo : la bannière s'affiche sur cet écran, comme chez les pèlerins qui ont l'app ouverte.
+      dispatchEvent(new CustomEvent('himmelsweg-notification', { detail: { modele, titre, texte } }));
+      return { envoyes: cible === 'moi' ? 1 : n, demo: true };
+    },
+    ecouterProgrammees: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.programmees] : []), cb),
+    async programmerNotification(n) {
+      exigerAdmin();
+      etat.programmees.push({ ...n, id: `p-${Date.now().toString(36)}`, par: 'demo', cree: new Date().toISOString() });
+      sauver();
+    },
+    async annulerProgrammee(id) {
+      exigerAdmin();
+      etat.programmees = etat.programmees.filter((p) => p.id !== id);
+      sauver();
     },
     async supprimerMembre(id) {
       exigerAdmin();

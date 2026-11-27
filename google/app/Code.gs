@@ -326,6 +326,11 @@ function suivre() {
     console.error('Comptes des repas : ' + err.message);
   }
   try {
+    envoyerProgrammees_();
+  } catch (err) {
+    console.error('Notifications programmées : ' + err.message);
+  }
+  try {
     rappelsBilan_();
   } catch (err) {
     console.error('Questionnaire de fin : ' + err.message);
@@ -363,6 +368,7 @@ function suivre() {
  */
 const BILAN_OUVERTURE = '2027-05-09T19:00:00+02:00';
 const BILAN_RELANCE_JOURS = 3;
+const AVIS_ = { modele: 'merci', lien: '/#/bilan', bouton: 'Répondre' };
 function rappelsBilan_() {
   const ouverture = Date.parse(BILAN_OUVERTURE);
   const maintenant = Date.now();
@@ -373,14 +379,14 @@ function rappelsBilan_() {
   if (config.annonce && !relancer) return;
   const inscrits = listerCollection_('membres').filter((m) => m.statut !== 'en_attente' && (m.roles || []).length);
   if (!config.annonce) {
-    envoyerNotifications_(inscrits.map((m) => m.id), 'Votre avis compte', 'Merci pour ces trois jours ! Dites-nous en 3 minutes ce qui vous a plu, dans l’app.');
+    envoyerNotifications_(inscrits.map((m) => m.id), 'Votre avis compte', 'Merci pour ces trois jours ! Dites-nous en 3 minutes ce qui vous a plu.', AVIS_);
     modifier_('config/bilan', { annonce: true });
     return;
   }
   const faits = {};
   listerCollection_('bilanFait').forEach((f) => (faits[f.id] = true));
   const restants = inscrits.filter((m) => !faits[m.id]).map((m) => m.id);
-  if (restants.length) envoyerNotifications_(restants, 'Il est encore temps', 'Votre avis sur le pèlerinage nous aide beaucoup : 3 minutes dans l’app.');
+  if (restants.length) envoyerNotifications_(restants, 'Il est encore temps', 'Votre avis sur le pèlerinage nous aide beaucoup : 3 minutes suffisent.', AVIS_);
   modifier_('config/bilan', { relance: true });
 }
 
@@ -457,32 +463,66 @@ function qui_(idToken) {
  * Notification sur les téléphones.
  * cible : 'tous' | 'chapitre' | 'role' (admins seulement) ou 'alerte' (l'adjoint sécurité qui l'a lancée).
  */
+const MODELES_NOTIFICATION = ['annonce', 'rendezvous', 'priere', 'chorale', 'merci', 'important'];
+
 function notifier_(d) {
   const appelant = qui_(d.idToken);
   const membres = listerCollection_('membres').filter((m) => m.statut !== 'en_attente');
-  let destinataires;
-  let titre;
-  let texte;
   if (d.cible === 'alerte') {
     const alerte = /^[A-Za-z0-9_-]{1,64}$/.test(d.valeur || '') && lireDocument_('alertes/' + d.valeur);
     if (!alerte || alerte.auteur !== appelant.uid) throw refus_('Alerte introuvable.');
-    destinataires = membres.filter((m) => (m.roles || []).indexOf('logistique') !== -1);
-    titre = 'Alerte accident';
-    texte = alerte.nom + (alerte.chapitre ? ' (chapitre ' + alerte.chapitre + ')' : '') + (alerte.message ? ' : ' + alerte.message : '') +
+    const texte = alerte.nom + (alerte.chapitre ? ' (chapitre ' + alerte.chapitre + ')' : '') + (alerte.message ? ' : ' + alerte.message : '') +
       (alerte.position ? ' – position : https://maps.google.com/?q=' + alerte.position.lat + ',' + alerte.position.lng : '');
-  } else {
-    if (!appelant.admin) throw refus_('Réservé aux administrateurs.');
-    titre = String(d.titre || '').trim().slice(0, 80);
-    texte = String(d.texte || '').trim().slice(0, 500);
-    if (!titre || !texte) throw refus_('Écrivez un titre et un message.');
-    destinataires = membres.filter((m) =>
-      d.cible === 'tous' ? true : d.cible === 'chapitre' ? m.chapitre === d.valeur : d.cible === 'role' ? (m.roles || []).indexOf(d.valeur) !== -1 || (d.valeur === 'chorale' && (m.reponses || {}).chorale === 'Oui') : false,
-    );
+    const logistique = membres.filter((m) => (m.roles || []).indexOf('logistique') !== -1).map((m) => m.id);
+    return envoyerNotifications_(logistique, 'Alerte accident', texte, { modele: 'important', lien: '/#/equipe', bouton: 'Voir l’alerte' });
   }
-  return envoyerNotifications_(destinataires.map((m) => m.id), titre, texte);
+  if (!appelant.admin) throw refus_('Réservé aux administrateurs.');
+  const titre = String(d.titre || '').trim().slice(0, 80);
+  const texte = String(d.texte || '').trim().slice(0, 500);
+  if (!titre || !texte) throw refus_('Écrivez un titre et un message.');
+  const ids = d.cible === 'moi' ? [appelant.uid] : destinataires_(membres, d.cible, d.valeur);
+  return envoyerNotifications_(ids, titre, texte, { modele: d.modele });
 }
 
-function envoyerNotifications_(ids, titre, texte) {
+/** Qui reçoit : tous, un chapitre ou une équipe (la chorale se lit dans les réponses). */
+function destinataires_(membres, cible, valeur) {
+  return membres
+    .filter((m) =>
+      cible === 'tous' ? true : cible === 'chapitre' ? m.chapitre === valeur : cible === 'role' ? (m.roles || []).indexOf(valeur) !== -1 || (valeur === 'chorale' && (m.reponses || {}).chorale === 'Oui') : false,
+    )
+    .map((m) => m.id);
+}
+
+/** Notifications programmées par les admins : envoyées dès que leur heure est passée, une seule fois. */
+function envoyerProgrammees_() {
+  const maintenant = Date.now();
+  const dues = listerCollection_('programmees').filter((p) => !p.envoyee && p.le && Date.parse(p.le) <= maintenant);
+  if (!dues.length) return;
+  const membres = listerCollection_('membres').filter((m) => m.statut !== 'en_attente');
+  dues.forEach((p) => {
+    // Marquée d'abord : jamais deux fois, même si deux suivis se croisent.
+    modifier_('programmees/' + p.id, { envoyee: new Date().toISOString() });
+    let r = { envoyes: 0 };
+    try {
+      const ids = p.cible === 'moi' ? [] : destinataires_(membres, p.cible, p.valeur);
+      r = envoyerNotifications_(ids, String(p.titre || '').slice(0, 80), String(p.texte || '').slice(0, 500), { modele: p.modele });
+    } catch (err) {
+      console.error('Notification programmée ' + p.id + ' : ' + err.message);
+    }
+    modifier_('programmees/' + p.id, { envoyes: r.envoyes });
+  });
+}
+
+/**
+ * Envoi par Firebase Cloud Messaging. Le message ne contient que des données : c'est le service worker
+ * de l'app (public/firebase-messaging-sw.js) qui l'affiche selon son modèle (photo, croix, bouton).
+ */
+function envoyerNotifications_(ids, titre, texte, options) {
+  const o = options || {};
+  const modele = MODELES_NOTIFICATION.indexOf(o.modele) !== -1 ? o.modele : 'annonce';
+  const donnees = { id: Utilities.getUuid(), modele, titre, texte };
+  if (o.lien) donnees.lien = o.lien;
+  if (o.bouton) donnees.bouton = o.bouton;
   const voulus = {};
   ids.forEach((id) => (voulus[id] = true));
   const jetons = listerCollection_('jetons').filter((j) => voulus[j.id] && j.token);
@@ -496,10 +536,8 @@ function envoyerNotifications_(ids, titre, texte) {
       payload: JSON.stringify({
         message: {
           token: j.token,
-          webpush: {
-            notification: { title: titre, body: texte, icon: ADRESSE_APP + '/icone-192.png' },
-            fcm_options: { link: ADRESSE_APP + '/' },
-          },
+          data: donnees,
+          webpush: { headers: { Urgency: 'high', TTL: '86400' } },
         },
       }),
       muteHttpExceptions: true,
