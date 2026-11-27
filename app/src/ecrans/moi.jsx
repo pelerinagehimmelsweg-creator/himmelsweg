@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
 import { ActiverNotifications, ReglageAlerte } from './equipe.jsx';
-import { CarteInviter, ReglageSoutien, Soutien } from './soutien.jsx';
+import { CarteInviter, ReglageInvitation, ReglageSoutien, Soutien } from './soutien.jsx';
 import { LIENS, droits, nomRole } from '../donnees/modele.js';
 import { enTexte, erreursPersonne, estVisible, questionsTriees, reponsesDe, versFiche } from '../donnees/questionnaire.js';
 
@@ -70,6 +70,7 @@ export function Moi({ donnees, session }) {
 
       {d.admin && <ReglageAlerte donnees={donnees} />}
       {d.admin && <ReglageSoutien donnees={donnees} />}
+      {d.admin && <ReglageInvitation donnees={donnees} />}
 
       {d.admin && (
         <section class="carte">

@@ -103,7 +103,7 @@ export function App({ donnees }) {
       ) : (
         <AdminInscriptions donnees={donnees} />
       );
-  } else if (page === 'inviter' && !session.estAdmin) contenu = <Inviter donnees={donnees} session={session} />;
+  } else if (page === 'inviter') contenu = <Inviter donnees={donnees} session={session} />;
   else if (page === 'boutique' || page === 'don') contenu = <PageHelloAsso donnees={donnees} quoi={page} />;
   else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
   else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
