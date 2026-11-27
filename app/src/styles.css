@@ -288,3 +288,25 @@ h1 .pastille { display: inline-grid; vertical-align: middle; margin-right: .3rem
   .texte-riche-corps { grid-template-columns: 1fr 1fr; }
   .texte-riche-corps textarea { min-height: 180px; }
 }
+
+/* Accueil du pèlerin */
+.apercu-moment { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .9rem; color: var(--gris); margin-bottom: .6rem; }
+.apercu-moment select { min-height: 36px; padding: .2rem .5rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); }
+.compte-a-rebours { display: flex; align-items: center; gap: 1rem; background: var(--rouge); color: #fff; border-radius: var(--rayon); padding: .9rem 1.1rem; margin-bottom: 1rem; }
+.compte-a-rebours strong { font-family: 'Cinzel', serif; font-size: 2rem; line-height: 1; white-space: nowrap; }
+.compte-a-rebours span { font-size: .95rem; line-height: 1.35; }
+.ok { color: #2e6b34; font-weight: 700; }
+.barre-progression { height: 8px; background: var(--creme-fonce); border-radius: 99px; overflow: hidden; margin: .3rem 0 .6rem; }
+.barre-progression span { display: block; height: 100%; background: var(--rouge); border-radius: 99px; transition: width .3s; }
+.a-faire { list-style: none; margin: 0; padding: 0; }
+.a-faire li { display: flex; align-items: center; gap: .7rem; min-height: 44px; border-bottom: 1px solid var(--creme-fonce); }
+.a-faire li:last-child { border-bottom: 0; }
+.a-faire input { width: 22px; height: 22px; accent-color: var(--rouge); flex: none; }
+.a-faire a { color: var(--encre); text-decoration: none; flex: 1; }
+.a-faire li.fait a { color: var(--gris); text-decoration: line-through; }
+.sommaire { display: flex; flex-wrap: wrap; gap: .4rem; padding: .7rem .9rem; }
+.sommaire a { background: var(--creme); border-radius: 99px; padding: .25rem .75rem; font-size: .9rem; text-decoration: none; color: var(--rouge-fonce); font-weight: 600; }
+article.carte { scroll-margin-top: 1rem; }
+.raccourcis { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1rem; }
+.intro-apres { font-size: 1.1rem; }
+.encart.attente { display: block; font-weight: 400; }
