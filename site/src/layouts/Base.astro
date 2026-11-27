@@ -93,5 +93,29 @@ const annee = new Date().getFullYear();
       </div>
       <p class="pied-copie">© {annee} Himmelsweg – Tous droits réservés</p>
     </footer>
+    <script>
+      // Apparitions douces : titres, photos, cartes et étapes montent en fondu en arrivant à l'écran.
+      // Rien pour ceux qui ont demandé moins d'animations, ni sans JavaScript (tout reste visible).
+      if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const choix = 'main h2, main h3, main .photo, main .carte, main .etape, main .temoin, main .faq details, main .apparait';
+        const elements = [...document.querySelectorAll<HTMLElement>(choix)].filter((e) => !e.closest('.accueil-hero, .titre-page, .ap'));
+        const io = new IntersectionObserver(
+          (entrees) =>
+            entrees.forEach((e) => {
+              if (!e.isIntersecting) return;
+              e.target.classList.add('vu');
+              io.unobserve(e.target);
+            }),
+          { rootMargin: '0px 0px -8% 0px' },
+        );
+        elements.forEach((e) => {
+          // Petit décalage entre voisins (une liste, deux colonnes) pour qu'ils arrivent l'un après l'autre.
+          const freres = [...(e.parentElement?.children ?? [])].filter((f) => elements.includes(f as HTMLElement));
+          e.style.setProperty('--decalage', `${Math.min(freres.indexOf(e), 4) * 90}ms`);
+          e.classList.add('ap');
+          io.observe(e);
+        });
+      }
+    </script>
   </body>
 </html>
