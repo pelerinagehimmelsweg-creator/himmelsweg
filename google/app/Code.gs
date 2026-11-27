@@ -126,6 +126,8 @@ function inscrire_(d) {
   const erreurs = personnes.map((p) => erreursPersonne(questions, { groupe: p.groupe, tarif: p.tarif, reponses: p.reponses || {} }, config.tarifs));
   if (erreurs.some((e) => Object.keys(e).length)) throw refus_('Certaines réponses sont incomplètes.', erreurs);
 
+  // Invitation d'un ami : le lien porte l'identifiant du pèlerin qui invite (compté une fois l'inscription confirmée).
+  const invite = /^[A-Za-z0-9_-]{1,60}$/.test(d.invite || '') && lireDocument_('membres/' + d.invite) ? d.invite : null;
   const don = config.don ? Math.min(1000000, Math.max(0, Math.round(Number(d.don) || 0))) : 0;
   const total = totalPanier(personnes, config.tarifs, don);
   const ref = nouvelleCle_();
@@ -145,6 +147,7 @@ function inscrire_(d) {
       tarif: p.tarif,
       dossier: ref,
     });
+    if (invite) membre.invitePar = invite;
     const cle = nouvelleCle_();
     ids.push(id);
     noms.push((membre.prenom + ' ' + membre.nom).trim());
@@ -166,6 +169,7 @@ function inscrire_(d) {
     relances: 0,
     liensEnvoyes: false,
   };
+  if (invite) dossier.invitePar = invite;
   ecritures.unshift(ecriture_('dossiers/' + ref, dossier, { existe: false }));
   enregistrer_(ecritures);
 
@@ -365,7 +369,17 @@ function envoyerLiensDuDossier_(ref) {
         console.error('E-mail non envoyé à ' + email + ' : ' + err.message + ' (lien visible dans l’app, fiche du pèlerin).');
       }
     });
-    modifier_('dossiers/' + ref, { liensEnvoyes: true });
+    const ecritures = [ecriture_('dossiers/' + ref, { liensEnvoyes: true }, { champs: ['liensEnvoyes'] })];
+    // Une seule fois par inscription : le pèlerin qui a invité voit « n amis inscrits grâce à vous ».
+    if (dossier.invitePar && lireDocument_('membres/' + dossier.invitePar)) {
+      ecritures.push({
+        transform: {
+          document: nomDocument_('membres/' + dossier.invitePar),
+          fieldTransforms: [{ fieldPath: 'amisInscrits', increment: { integerValue: String(dossier.membres.length) } }],
+        },
+      });
+    }
+    enregistrer_(ecritures);
   } finally {
     verrou.releaseLock();
   }

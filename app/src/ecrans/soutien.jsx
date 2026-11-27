@@ -116,3 +116,17 @@ export function ReglageSoutien({ donnees }) {
     </form>
   );
 }
+
+/** Petite carte « Invitez un ami » (accueil et Moi). */
+export function CarteInviter({ session }) {
+  const amis = Number(session.amisInscrits) || 0;
+  return (
+    <a class="carte carte-inviter" href="#/inviter">
+      <span>
+        <strong>Invitez un ami</strong>
+        <small>{amis > 0 ? `${amis} ${amis > 1 ? 'amis inscrits' : 'ami inscrit'} grâce à vous` : 'Une invitation à votre nom, à partager en un geste'}</small>
+      </span>
+      <span class="bouton petit">Inviter</span>
+    </a>
+  );
+}

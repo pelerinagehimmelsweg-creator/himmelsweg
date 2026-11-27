@@ -51,6 +51,24 @@ export function Inscription({ donnees }) {
   );
 }
 
+// Arrivée par l'invitation d'un ami : ?invite=<pèlerin>&de=<prénom>, gardé si la page est rechargée.
+const CLE_INVITE = 'himmelsweg-invite';
+function lireInvitation() {
+  const p = new URLSearchParams(location.search);
+  if (p.get('invite')) {
+    const i = { id: p.get('invite').slice(0, 60), de: (p.get('de') ?? '').slice(0, 40) };
+    try {
+      localStorage.setItem(CLE_INVITE, JSON.stringify(i));
+    } catch {}
+    return i;
+  }
+  try {
+    return JSON.parse(localStorage.getItem(CLE_INVITE) || 'null');
+  } catch {
+    return null;
+  }
+}
+
 function Formulaire({ donnees }) {
   const questions = useAbonnement((cb) => donnees.ecouterQuestions(cb), [donnees], null);
   const config = useAbonnement((cb) => donnees.ecouterConfig(cb), [donnees], undefined);
@@ -59,6 +77,7 @@ function Formulaire({ donnees }) {
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState('');
   const [donLibre, setDonLibre] = useState(false);
+  const [invitation] = useState(lireInvitation);
 
   useEffect(() => {
     try {
@@ -113,9 +132,11 @@ function Formulaire({ donnees }) {
         don: config.don ? f.don : 0,
         reglement: f.reglement,
         piege,
+        invite: invitation?.id,
       });
       try {
         localStorage.removeItem(BROUILLON);
+        localStorage.removeItem(CLE_INVITE);
       } catch {}
       if (r.redirectUrl) location.href = r.redirectUrl;
       else location.href = lienInscription('/merci', { ref: r.ref });
@@ -134,6 +155,11 @@ function Formulaire({ donnees }) {
   return (
     <form class="formulaire inscription" onSubmit={envoyer} noValidate>
       <h1>Inscription au pèlerinage</h1>
+      {invitation?.de && (
+        <p class="encart invite">
+          <span>🙏 Vous êtes invité par {invitation.de}. Bienvenue sur le chemin du Ciel !</span>
+        </p>
+      )}
       <p>
         Vendredi 7, samedi 8 et dimanche 9 mai 2027, de Scherwiller à Colmar. Vous pouvez inscrire plusieurs personnes à la
         fois (par exemple toute une famille) et payer en une seule fois sur HelloAsso.
