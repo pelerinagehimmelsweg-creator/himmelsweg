@@ -76,6 +76,24 @@ service cloud.firestore {
       allow read: if equipe('logistique') || jeSuisMembre();
       allow write: if equipe('logistique');
     }
+    // Carte : traces GPX et repères (bivouac, eau…), vus par tous les participants, posés par la logistique.
+    match /traces/{id} {
+      allow read: if estAdmin() || jeSuisMembre();
+      allow write: if equipe('logistique');
+    }
+    match /reperes/{id} {
+      allow read: if estAdmin() || jeSuisMembre();
+      allow write: if equipe('logistique');
+    }
+    // Position des chefs de chapitre pendant le pèlerinage : chacun n'écrit que la sienne,
+    // seules la logistique et les admins la voient. Les pèlerins ne partagent jamais la leur.
+    match /positions/{uid} {
+      allow read: if equipe('logistique');
+      allow create, update: if aRole('chef') && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lat', 'lng', 'precision', 'maj', 'nom', 'chapitre'])
+        && request.resource.data.lat is number && request.resource.data.lng is number;
+      allow delete: if estAdmin() || (connecte() && request.auth.uid == uid);
+    }
     match /prevoyance/{id} {
       allow read, write: if equipe('logistique');
     }

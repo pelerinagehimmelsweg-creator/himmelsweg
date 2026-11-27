@@ -203,6 +203,10 @@ function Pendant({ donnees, contenus }) {
           <strong>Prier</strong>
           <span>Chants et prières</span>
         </a>
+        <a class="tuile" href="#/carte">
+          <strong>Carte</strong>
+          <span>Parcours et repères</span>
+        </a>
         <a class="tuile" href={urgences ? `#/infos/${urgences.id}` : '#/infos'}>
           <strong>Urgences</strong>
           <span>Numéros utiles</span>

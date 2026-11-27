@@ -31,6 +31,8 @@ before(async () => {
     await setDoc(doc(db, 'stats/repas'), { total: 6 });
     await setDoc(doc(db, 'parcours/e1'), { titre: 'Départ' });
     await setDoc(doc(db, 'prevoyance/p1'), { objet: 'Tentes' });
+    await setDoc(doc(db, 'traces/t1'), { nom: 'Vendredi', trace: 'abc' });
+    await setDoc(doc(db, 'reperes/r1'), { type: 'eau', lat: 48, lng: 7 });
     await setDoc(doc(db, 'fils/logistique/messages/m1'), { auteur: 'logi', texte: 'Bonjour' });
     await setDoc(doc(db, 'alertes/a1'), { auteur: 'secuA', traitee: false });
     await setDoc(doc(db, 'config/app'), { smsAlerte: '06' });
@@ -163,6 +165,32 @@ test('logistique : parcours et prévoyance ; chefs et pèlerins lisent le parcou
   await assertFails(getDoc(doc(membre('chefA'), 'prevoyance/p1')));
   await assertSucceeds(getDoc(doc(membre('pelA'), 'parcours/e1')));
   await assertFails(setDoc(doc(membre('pelA'), 'parcours/e1'), { titre: 'x' }));
+});
+
+test('carte : traces et repères lus par tous, posés par la logistique', async () => {
+  await assertSucceeds(getDocs(collection(membre('pelA'), 'traces')));
+  await assertSucceeds(getDoc(doc(membre('pelB'), 'reperes/r1')));
+  await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), 'traces')));
+  await assertFails(setDoc(doc(membre('pelA'), 'reperes/r2'), { type: 'eau', lat: 1, lng: 2 }));
+  await assertFails(setDoc(doc(membre('chefA'), 'traces/t2'), { nom: 'x' }));
+  await assertSucceeds(setDoc(doc(membre('logi'), 'reperes/r2'), { type: 'eau', lat: 1, lng: 2 }));
+  await assertSucceeds(setDoc(doc(membre('logi'), 'traces/t2'), { nom: 'Samedi', trace: 'def' }));
+  await assertSucceeds(deleteDoc(doc(admin(), 'reperes/r2')));
+});
+
+test('position des chefs : le chef écrit la sienne, seule la logistique la voit', async () => {
+  const pos = { lat: 48.1, lng: 7.3, precision: 12, maj: '2027-05-08T10:00:00Z', nom: 'Chef A', chapitre: 'A' };
+  await assertSucceeds(setDoc(doc(membre('chefA'), 'positions/chefA'), pos));
+  await assertFails(setDoc(doc(membre('chefA'), 'positions/pelA'), pos));
+  await assertFails(setDoc(doc(membre('pelA'), 'positions/pelA'), pos));
+  await assertFails(setDoc(doc(membre('chefA'), 'positions/chefA'), { ...pos, sante: 'x' }));
+  await assertFails(getDoc(doc(membre('chefA'), 'positions/chefA')));
+  await assertFails(getDocs(collection(membre('pelA'), 'positions')));
+  await assertFails(getDocs(collection(membre('secuA'), 'positions')));
+  await assertSucceeds(getDocs(collection(membre('logi'), 'positions')));
+  await assertSucceeds(getDocs(collection(admin(), 'positions')));
+  await assertFails(deleteDoc(doc(membre('logi'), 'positions/chefA')));
+  await assertSucceeds(deleteDoc(doc(membre('chefA'), 'positions/chefA')));
 });
 
 test('discussions : chacun son équipe, messages signés', async () => {

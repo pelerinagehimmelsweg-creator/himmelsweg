@@ -310,3 +310,36 @@ article.carte { scroll-margin-top: 1rem; }
 .raccourcis { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1rem; }
 .intro-apres { font-size: 1.1rem; }
 .encart.attente { display: block; font-weight: 400; }
+
+/* Carte du parcours */
+.jours { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .7rem; }
+.puce { display: inline-flex; align-items: center; gap: .35rem; min-height: 38px; padding: .3rem .85rem; border-radius: 99px; border: 1px solid #cfc5ad; background: var(--blanc); color: var(--encre); font-weight: 600; font-size: .92rem; cursor: pointer; }
+.puce[aria-pressed='true'] { background: var(--rouge); border-color: var(--rouge); color: var(--blanc); }
+.carte-zone { position: relative; margin: 0 -1rem .8rem; }
+.carte-leaflet { height: min(62vh, 520px); min-height: 320px; background: #e8e2d0; z-index: 0; }
+@media (min-width: 720px) { .carte-zone { margin: 0 0 .8rem; } .carte-leaflet { border-radius: var(--rayon); } }
+.carte-zone.pointe .carte-leaflet { cursor: crosshair; }
+.bouton-moi { position: absolute; right: 10px; bottom: 24px; z-index: 500; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--blanc); color: #1f6fb2; box-shadow: 0 2px 8px rgba(0,0,0,.25); display: grid; place-items: center; cursor: pointer; }
+.carte-consigne { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 500; background: var(--encre); color: var(--creme); padding: .35rem .8rem; border-radius: 99px; font-size: .9rem; font-weight: 600; white-space: nowrap; pointer-events: none; }
+.repere { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); color: #fff; font-size: 15px; font-weight: 700; line-height: 1; font-family: var(--texte); }
+.repere.choisi { outline: 3px solid #f3d77a; transform: scale(1.15); }
+.repere.mini { display: inline-grid; width: 22px; height: 22px; font-size: 11px; border-width: 1px; box-shadow: none; vertical-align: middle; flex: none; }
+.pos-chef { display: grid; place-items: center; height: 22px; padding: 0 .4rem; border-radius: 99px; background: #7a3fa0; color: #fff; font-size: 12px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); font-family: var(--texte); }
+.pos-chef.vieux { background: #8d8580; }
+.legende { list-style: none; padding: 0; margin: 0 0 .6rem; display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .92rem; }
+.legende li { display: flex; align-items: center; gap: .4rem; }
+.trait { display: inline-block; width: 22px; height: 5px; border-radius: 3px; flex: none; }
+.petit-texte { font-size: .85rem; }
+.interrupteur { display: flex; align-items: center; gap: .7rem; font-weight: 600; cursor: pointer; }
+.interrupteur input { width: 24px; height: 24px; accent-color: var(--rouge); flex: none; }
+.types-repere { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .9rem; }
+.types-repere .puce[aria-pressed='true'] .repere { border-color: #fff; }
+.ligne-trace { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; }
+.ligne-trace > span:nth-child(2) { flex: 1; }
+.champ-import { display: grid; grid-template-columns: 1fr 1fr; gap: .2rem .7rem; align-items: end; padding: .5rem 0; border-bottom: 1px solid var(--creme-fonce); }
+.champ-import label { font-weight: 600; font-size: .92rem; }
+.champ-import input, .champ-import select { width: 100%; min-height: 40px; padding: .4rem .6rem; border: 1px solid #cfc5ad; border-radius: 8px; background: var(--blanc); margin-top: .2rem; font-weight: 400; }
+.fichier { position: relative; overflow: hidden; }
+.fichier input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.leaflet-container { font-family: var(--texte); }
+.leaflet-popup-content { font-size: .95rem; line-height: 1.4; }
