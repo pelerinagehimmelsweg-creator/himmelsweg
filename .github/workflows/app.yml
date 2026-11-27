@@ -37,6 +37,8 @@ jobs:
       - run: npm run test:regles
       - name: Tests du script Google
         run: node --test ../google/app/script.test.mjs
+      - name: Tests de la carte (lecture des GPX)
+        run: node --test tests/carte.test.js
 
   publier:
     needs: verifier

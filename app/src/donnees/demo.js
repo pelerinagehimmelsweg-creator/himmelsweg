@@ -3,10 +3,11 @@
 
 import { CHAPITRES, CONTENUS, PERSONAS, dossiersExemple, membresExemple } from './exemples.js';
 import { droits, estChoriste, sansRolesDeChapitre } from './modele.js';
+import { REPERES_EXEMPLE, TRACES_EXEMPLE } from './carte.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
 
-const CLE = 'himmelsweg-demo-v5';
+const CLE = 'himmelsweg-demo-v6';
 const CLE_SESSION = 'himmelsweg-demo-session';
 
 function lireEtat() {
@@ -37,6 +38,13 @@ function lireEtat() {
         { id: 'f2', nom: 'Traiteur du Ried', tel: '03 89 00 00 02', livre: 'Plat chaud du samedi soir', quand: 'Samedi 18 h', prix: '9 € par personne' },
       ],
       parcours: structuredClone(PARCOURS_DEPART),
+      traces: structuredClone(TRACES_EXEMPLE),
+      reperes: structuredClone(REPERES_EXEMPLE),
+      positions: [
+        ...membres
+          .filter((m) => m.id === 'm-F1')
+          .map((m) => ({ id: m.id, lat: 48.2391, lng: 7.3655, precision: 15, maj: new Date(Date.now() - 4 * 60000).toISOString(), nom: `${m.prenom} ${m.nom}`, chapitre: m.chapitre })),
+      ],
       prevoyance: [
         { id: 'p1', objet: 'Tentes de secours', quantite: '4', responsable: 'Damien', fait: true },
         { id: 'p2', objet: 'Trousses de premiers secours', quantite: '1 par chapitre', responsable: 'Damien', fait: false },
@@ -119,7 +127,10 @@ export function creerDemo() {
   };
   const DROITS_LISTES = {
     fournisseurs: { lire: ['repas'], ecrire: ['repas'] },
-    parcours: { lire: ['logistique', 'chef', 'securite'], ecrire: ['logistique'] },
+    parcours: { lire: ['pelerin', 'logistique', 'chef', 'securite'], ecrire: ['logistique'] },
+    traces: { lire: ['pelerin', 'logistique', 'chef', 'securite'], ecrire: ['logistique'] },
+    reperes: { lire: ['pelerin', 'logistique', 'chef', 'securite'], ecrire: ['logistique'] },
+    positions: { lire: ['logistique'], ecrire: ['chef'] },
     prevoyance: { lire: ['logistique'], ecrire: ['logistique'] },
   };
   const lienDe = (id) => Object.keys(etat.liens).find((k) => etat.liens[k] === id);

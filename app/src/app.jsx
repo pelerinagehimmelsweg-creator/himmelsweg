@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Icone, useAbonnement, useEnLigne } from './composants/base.jsx';
 import logo from './composants/logo.png';
 import { droits } from './donnees/modele.js';
+import { usePartagePosition } from './donnees/partage.js';
 import { Connexion } from './ecrans/connexion.jsx';
 import { Rubrique } from './ecrans/contenus.jsx';
 import { Accueil } from './ecrans/accueil.jsx';
@@ -11,14 +12,22 @@ import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
 
-// L'éditeur du site n'est chargé que par les admins qui l'ouvrent.
-function EditeurSite(props) {
-  const [Ecran, setEcran] = useState(null);
-  useEffect(() => {
-    import('./ecrans/site.jsx').then((m) => setEcran(() => m.AdminSite));
-  }, []);
-  return Ecran ? <Ecran {...props} /> : <p class="discret">Chargement…</p>;
+// Écrans chargés seulement à leur ouverture : l'éditeur du site (admins) et la carte.
+function aLaDemande(charger) {
+  return function Ecran(props) {
+    const [E, setE] = useState(null);
+    const [erreur, setErreur] = useState(false);
+    useEffect(() => {
+      charger()
+        .then((c) => setE(() => c))
+        .catch(() => setErreur(true));
+    }, []);
+    if (erreur) return <p class="alerte">Impossible d’ouvrir cet écran sans réseau. Réessayez une fois connecté.</p>;
+    return E ? <E {...props} /> : <p class="discret">Chargement…</p>;
+  };
 }
+const EditeurSite = aLaDemande(() => import('./ecrans/site.jsx').then((m) => m.AdminSite));
+const Carte = aLaDemande(() => import('./ecrans/carte.jsx').then((m) => m.Carte));
 
 function useRoute() {
   const lire = () => location.hash.replace(/^#\/?/, '');
@@ -37,6 +46,8 @@ export function App({ donnees }) {
   const enLigne = useEnLigne();
   const [erreurLien, setErreurLien] = useState('');
   const [lienEnCours, setLienEnCours] = useState(false);
+  // Un chef qui a activé le partage envoie sa position tant que l'app est ouverte, quel que soit l'onglet.
+  usePartagePosition(donnees, session && !session.refuse ? session : null);
 
   // Arrivée par le lien personnel reçu par e-mail : app.himmelsweg.fr/#cle=...
   useEffect(() => {
@@ -62,6 +73,7 @@ export function App({ donnees }) {
     { id: 'accueil', nom: 'Accueil' },
     { id: 'infos', nom: 'Infos' },
     { id: 'prier', nom: 'Prier' },
+    { id: 'carte', nom: 'Carte' },
     ...(voitDesPelerins ? [{ id: 'pelerins', nom: d.voirTousLesMembres ? 'Pèlerins' : 'Chapitre' }] : []),
     ...(voitEquipe(session) ? [{ id: 'equipe', nom: 'Équipe' }] : []),
     { id: 'moi', nom: 'Moi' },
@@ -86,6 +98,7 @@ export function App({ donnees }) {
   else if (actif === 'equipe') contenu = <Equipe donnees={donnees} session={session} sous={sous} detail={detail} />;
   else if (actif === 'pelerins' && sous) contenu = <FicheMembre donnees={donnees} session={session} id={sous} />;
   else if (actif === 'pelerins') contenu = <ListeMembres donnees={donnees} session={session} />;
+  else if (actif === 'carte') contenu = <Carte donnees={donnees} session={session} />;
   else if (actif === 'moi') contenu = <Moi donnees={donnees} session={session} />;
   else if (actif === 'infos' || actif === 'prier') contenu = <Rubrique donnees={donnees} session={session} rubrique={actif} ancre={sous} />;
   else contenu = <Accueil donnees={donnees} session={session} />;
@@ -107,7 +120,7 @@ export function App({ donnees }) {
           Hors ligne. Tout ce que vous avez déjà ouvert reste disponible, vos changements partiront au retour du réseau.
         </div>
       )}
-      <main class={`page${page === 'admin' && sous === 'site' ? ' large' : ''}`} key={session.id}>
+      <main class={`page${page === 'admin' && sous === 'site' ? ' large' : ''}${actif === 'carte' ? ' page-carte' : ''}`} key={session.id}>
         {contenu}
       </main>
       <nav class="onglets" aria-label="Navigation">
