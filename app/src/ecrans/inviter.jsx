@@ -7,6 +7,8 @@ import photoF from "../composants/invitation-f.jpg";
 import photoH from "../composants/invitation-h.jpg";
 import { joursAvant } from "../donnees/modele.js";
 import { motInvitation } from "./soutien.jsx";
+import { ALSACE } from "../composants/alsace.js";
+import { CHEMIN, projection } from "../composants/accueil-invite.jsx";
 
 const L = 1080;
 const H = 1920;
@@ -78,6 +80,19 @@ export async function preparer({ groupe }) {
   return { photo, blason };
 }
 
+// Petite carte de l'Alsace (250 × 360), avec le chemin et la longueur des tracés pour les dessiner peu à peu.
+const CARTE = (() => {
+  const l = 250;
+  const h = 360;
+  const proj = projection(ALSACE, l, h, 6);
+  const long = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+  const a = ALSACE.map(proj);
+  const tr = CHEMIN.map(proj);
+  const chemin = (pts) => `M${pts.map((p) => p.join(" ")).join(" L")}`;
+  const P = typeof Path2D === "undefined" ? String : (d) => new Path2D(d);
+  return { l, h, contour: P(`${chemin(a)} Z`), trace: P(chemin(tr)), longContour: long([...a, a[0]]), longTrace: long(tr), arrivee: tr.at(-1) };
+})();
+
 // Durée de l'animation (vidéo) ; à la fin, l'image est exactement l'image fixe.
 export const DUREE_VIDEO = 7;
 const doux = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
@@ -124,23 +139,40 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
   c.fillStyle = g;
   c.fillRect(0, 0, L, H);
 
-  // Étincelles dorées qui montent (vidéo seulement).
-  if (!fixe) {
-    for (let i = 0; i < 26; i++) {
-      const vitesse = 120 + ((i * 37) % 90);
-      const y = H + 20 - ((t * vitesse + i * 211) % (H + 40));
-      const x = ((i * 397) % L) + Math.sin(t * 1.3 + i) * 18;
-      const a = 0.25 + 0.6 * Math.abs(Math.sin(t * 2 + i * 1.7));
-      c.save();
-      c.globalAlpha = a * Math.min(1, t / 0.8);
-      c.fillStyle = "#f3d77a";
-      c.shadowColor = "#f3d77a";
-      c.shadowBlur = 16;
-      c.beginPath();
-      c.arc(x, y, 3 + (i % 3), 0, Math.PI * 2);
-      c.fill();
-      c.restore();
+  // Carte de l'Alsace avec le chemin en rouge, en haut à droite.
+  const kc = fixe ? 1 : avance(t, 0.5, 1.4);
+  const kt = fixe ? 1 : avance(t, 1.7, 1.4);
+  if (kc > 0) {
+    const ox = L - 80 - CARTE.l;
+    const oy = 290;
+    c.save();
+    c.translate(ox, oy);
+    c.lineJoin = "round";
+    c.lineCap = "round";
+    c.shadowColor = "rgba(0,0,0,.35)";
+    c.shadowBlur = 10;
+    c.fillStyle = `rgba(255,253,248,${0.9 * (fixe ? 1 : doux((t - 1.2) / 0.6))})`;
+    c.fill(CARTE.contour);
+    c.shadowBlur = 0;
+    c.strokeStyle = "#fffdf8";
+    c.lineWidth = 3;
+    c.setLineDash([CARTE.longContour * kc, CARTE.longContour]);
+    c.stroke(CARTE.contour);
+    if (kt > 0) {
+      c.setLineDash([CARTE.longTrace * kt, CARTE.longTrace]);
+      c.strokeStyle = "#b32d24";
+      c.lineWidth = 7;
+      c.stroke(CARTE.trace);
+      c.setLineDash([]);
+      if (kt >= 1) {
+        const [x, y] = CARTE.arrivee;
+        c.fillStyle = "#b32d24";
+        c.beginPath();
+        c.arc(x, y, 10, 0, Math.PI * 2);
+        c.fill();
+      }
     }
+    c.restore();
   }
 
   // En-tête : blason et nom, compte à rebours.
@@ -200,7 +232,7 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
           c.fillRect(100 + j * m, yQr + i * m, Math.ceil(m), Math.ceil(m));
   });
   apparait(4.5, () => {
-    c.fillStyle = "#f3d77a";
+    c.fillStyle = "#fff";
     c.font = sans(700, 44);
     c.fillText("Rejoins-moi", 360, yQr + 70);
     c.fillStyle = "#fff";
@@ -229,20 +261,15 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
   titre.forEach((l, i) => {
     apparait(1.1 + i * 0.55, () => {
       c.font = "700 96px Cinzel";
-      c.fillStyle = i === 2 ? "#f3d77a" : "#fff";
-      c.fillText(l, 80, y + i * 104);
-      // Reflet doré qui traverse « Et toi ? ».
-      if (i === 2 && !fixe && t > 2.6 && t < 4) {
-        const lx = 80 + ((t - 2.6) / 1.4) * (c.measureText(l).width + 300) - 150;
-        const reflet = c.createLinearGradient(lx - 90, 0, lx + 90, 0);
-        reflet.addColorStop(0, "rgba(255,248,220,0)");
-        reflet.addColorStop(0.5, "rgba(255,250,232,.95)");
-        reflet.addColorStop(1, "rgba(255,248,220,0)");
-        c.globalCompositeOperation = "source-atop";
-        c.fillStyle = reflet;
-        c.fillText(l, 80, y + i * 104);
-        c.globalCompositeOperation = "source-over";
+      if (i === 2) {
+        // « Et toi ? » en blanc sur un bandeau rouge du blason.
+        const lt = c.measureText(l).width;
+        c.fillStyle = "#b32d24";
+        arrondi(c, 56, y + i * 104 - 84, lt + 48, 108, 14);
+        c.fill();
       }
+      c.fillStyle = "#fff";
+      c.fillText(l, 80, y + i * 104);
     }, 0.8, 60);
   });
 }
