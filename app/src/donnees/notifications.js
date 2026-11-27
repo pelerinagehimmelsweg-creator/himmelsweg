@@ -18,3 +18,13 @@ export function notificationAffichee({ modele, titre, texte, lien, bouton }) {
 /** Date et heure lisibles (heure de Paris). */
 export const quandNotification = (iso) =>
   new Date(iso).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+
+/** « {prénom} » devient le prénom ; sans prénom, le marqueur disparaît proprement (même règle que le script Google). */
+export function personnaliser(texte, prenom) {
+  const s = String(texte || '');
+  if (!/\{pr[ée]nom\}/i.test(s)) return s;
+  if (prenom) return s.replace(/\{pr[ée]nom\}/gi, prenom);
+  const r = s.replace(/\{pr[ée]nom\}\s*,\s*/gi, '').replace(/,?\s*\{pr[ée]nom\}/gi, '').trim();
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+export const MARQUEUR_PRENOM = '{prénom}';
