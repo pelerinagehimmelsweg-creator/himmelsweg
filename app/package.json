@@ -14,6 +14,7 @@
     "firebase": "^13.4.0",
     "leaflet": "^1.9.4",
     "preact": "^11.2.0",
+    "qrcode-generator": "^1.4.4",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@ import { useAbonnement } from '../composants/base.jsx';
 import { JOURS, aujourdhui, droits, joursAvant, momentDu } from '../donnees/modele.js';
 import { lienCarte } from '../donnees/equipes.js';
 import { EditeurContenu, TexteAdmin, nouveau, textesDe } from './contenus.jsx';
-import { Soutien } from './soutien.jsx';
+import { CarteInviter, Soutien } from './soutien.jsx';
 
 const CLE_FAIT = 'himmelsweg-a-faire';
 const lireFaits = () => {
@@ -78,6 +78,7 @@ export function Accueil({ donnees, session }) {
       {moment === 'avant' && (
         <>
           {!session.estAdmin && <AFaire />}
+          {!session.estAdmin && <CarteInviter session={session} />}
           {textes('accueil')}
           {ajouter('accueil', 'Ajouter un mot sur l’accueil')}
           <Soutien donnees={donnees} />

@@ -238,6 +238,23 @@ export function FicheMembre({ donnees, session, id }) {
                 {m.tarif && ` · tarif ${m.tarif}`}
                 {m.inscritLe && ` · le ${new Date(m.inscritLe).toLocaleDateString('fr-FR')}`}
               </dd>
+              {m.invitePar && (
+                <>
+                  <dt>Invité par</dt>
+                  <dd>
+                    {(() => {
+                      const p = membres.find((x) => x.id === m.invitePar);
+                      return p ? <a href={`#/pelerins/${p.id}`}>{`${p.prenom} ${p.nom}`}</a> : '—';
+                    })()}
+                  </dd>
+                </>
+              )}
+              {m.amisInscrits > 0 && (
+                <>
+                  <dt>Amis invités</dt>
+                  <dd>{m.amisInscrits} inscrit{m.amisInscrits > 1 ? 's' : ''} grâce à {m.prenom}</dd>
+                </>
+              )}
             </>
           )}
           {lignes(affichees.filter((q) => q.visibilite !== 'sensible'))}

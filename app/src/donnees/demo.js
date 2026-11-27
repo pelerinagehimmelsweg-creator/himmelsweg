@@ -135,9 +135,16 @@ export function creerDemo() {
     prevoyance: { lire: ['logistique'], ecrire: ['logistique'] },
   };
   const lienDe = (id) => Object.keys(etat.liens).find((k) => etat.liens[k] === id);
+  // Comme le script : l'ami qui a invité gagne +1 par personne, une fois l'inscription confirmée.
+  const compterInvites = (ref) => {
+    const d = etat.dossiers.find((x) => x.id === ref);
+    if (!d?.invitePar) return;
+    etat.membres = etat.membres.map((m) => (m.id === d.invitePar ? { ...m, amisInscrits: (m.amisInscrits ?? 0) + d.membres.length } : m));
+  };
   const regler = (ref, statut, extra = {}) => {
     const d = etat.dossiers.find((x) => x.id === ref);
     etat.dossiers = etat.dossiers.map((x) => (x.id === ref ? { ...x, statut, regleLe: new Date().toISOString(), liensEnvoyes: true, ...extra } : x));
+    if (!d.liensEnvoyes) compterInvites(ref);
     etat.membres = etat.membres.map((m) => (d.membres.includes(m.id) ? { ...m, statut: 'inscrit' } : m));
     sauver();
   };
@@ -240,7 +247,7 @@ export function creerDemo() {
     },
 
     // Inscription publique : même contrôle que le script Google, paiement simulé.
-    async inscrire({ personnes, payeur, don, reglement }) {
+    async inscrire({ personnes, payeur, don, reglement, invite }) {
       await new Promise((r) => setTimeout(r, 400));
       if (!etat.config.ouverte) throw new Error('Les inscriptions sont fermées pour le moment.');
       if (reglement !== true) throw new Error('Le règlement doit être accepté.');
@@ -265,6 +272,7 @@ export function creerDemo() {
           statut: total === 0 ? 'inscrit' : 'en_attente',
           tarif: p.tarif,
           dossier: ref,
+          ...(etat.membres.some((m) => m.id === invite) ? { invitePar: invite } : {}),
         });
         etat.prive[id] = prive;
         etat.liens[`demo-${id}`] = id;
@@ -282,7 +290,9 @@ export function creerDemo() {
         noms,
         relances: 0,
         liensEnvoyes: total === 0,
+        ...(etat.membres.some((m) => m.id === invite) ? { invitePar: invite } : {}),
       });
+      if (total === 0) compterInvites(ref);
       sauver();
       if (total === 0) return { ref, gratuit: true };
       return { ref, redirectUrl: `/inscription/demo-paiement?demo&ref=${ref}` };

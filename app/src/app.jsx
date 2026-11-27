@@ -31,6 +31,7 @@ function aLaDemande(charger) {
 }
 const EditeurSite = aLaDemande(() => import('./ecrans/site.jsx').then((m) => m.AdminSite));
 const Carte = aLaDemande(() => import('./ecrans/carte.jsx').then((m) => m.Carte));
+const Inviter = aLaDemande(() => import('./ecrans/inviter.jsx').then((m) => m.Inviter));
 
 function useRoute() {
   const lire = () => location.hash.replace(/^#\/?/, '');
@@ -102,7 +103,8 @@ export function App({ donnees }) {
       ) : (
         <AdminInscriptions donnees={donnees} />
       );
-  } else if (page === 'boutique' || page === 'don') contenu = <PageHelloAsso donnees={donnees} quoi={page} />;
+  } else if (page === 'inviter') contenu = <Inviter donnees={donnees} session={session} />;
+  else if (page === 'boutique' || page === 'don') contenu = <PageHelloAsso donnees={donnees} quoi={page} />;
   else if (page === 'photos') contenu = <Photos donnees={donnees} session={session} />;
   else if (actif === 'moi' && sous === 'modifier' && !session.estAdmin) contenu = <ModifierMesReponses donnees={donnees} session={session} />;
   else if (actif === 'equipe') contenu = <Equipe donnees={donnees} session={session} sous={sous} detail={detail} />;

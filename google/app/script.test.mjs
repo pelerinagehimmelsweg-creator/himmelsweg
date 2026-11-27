@@ -128,7 +128,17 @@ function charger({ proprietes = {}, base = {}, paye = () => false, maintenant, s
     if (url.endsWith(':commit')) {
       let { writes } = JSON.parse(opts.payload);
       writes.filter((w) => w.delete).forEach((w) => docs.delete(w.delete.split('/documents/')[1]));
-      writes = writes.filter((w) => !w.delete);
+      writes
+        .filter((w) => w.transform)
+        .forEach((w) => {
+          const chemin = w.transform.document.split('/documents/')[1];
+          const d = { ...(docs.get(chemin) ?? {}) };
+          w.transform.fieldTransforms.forEach((t) => {
+            d[t.fieldPath] = { integerValue: String(Number(d[t.fieldPath]?.integerValue ?? 0) + Number(t.increment.integerValue)) };
+          });
+          docs.set(chemin, d);
+        });
+      writes = writes.filter((w) => !w.delete && !w.transform);
       const chemins = writes.map((w) => w.update.name.split('/documents/')[1]);
       if (writes.some((w, i) => w.currentDocument?.exists === false && docs.has(chemins[i]))) return rep(409, 'ALREADY_EXISTS');
       writes.forEach((w, i) => {
@@ -608,4 +618,24 @@ test('photos : tri par un admin (galerie partagée par lien), retrait par l’au
   assert.deepEqual(s.appeler({ action: 'photoSupprimer', idToken: 'jeton-pel1', id: 'ph-autre123' }), { ok: true });
   assert.equal(s.lire('photos/ph-autre123'), null);
   assert.equal(s.fichiers.get(autre).corbeille, true);
+});
+
+test('invitation : l’ami inscrit garde la trace de qui l’a invité, compté une seule fois après paiement', () => {
+  let payes = new Set();
+  const s = charger({ base: { ...BASE_DEPART, 'membres/i-antoine': { prenom: 'Antoine', statut: 'inscrit', roles: ['pelerin'] } }, paye: (id) => payes.has(id) });
+  const r = s.appeler({ action: 'inscription', personnes: [ADULTE, ADULTE], payeur: { prenom: 'Paul', nom: 'Ott', email: 'paul@exemple.fr' }, don: 0, reglement: true, invite: 'i-antoine' });
+  const dossier = s.lire('dossiers/' + r.ref);
+  assert.equal(dossier.invitePar, 'i-antoine');
+  assert.equal(s.lire('membres/' + dossier.membres[0]).invitePar, 'i-antoine');
+  s.suivre();
+  assert.equal(s.lire('membres/i-antoine').amisInscrits, undefined, 'pas encore payé');
+  payes = new Set(s.intentions.map((i) => i.id));
+  s.suivre();
+  s.suivre();
+  assert.equal(s.lire('membres/i-antoine').amisInscrits, 2);
+  assert.equal(s.lire('membres/i-antoine').prenom, 'Antoine');
+  // Lien d'invitation inventé ou abîmé : inscription normale, sans parrain.
+  const r2 = s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: { prenom: 'Paul', nom: 'Ott', email: 'paul@exemple.fr' }, don: 0, reglement: true, invite: 'i-inconnu' });
+  assert.equal(s.lire('dossiers/' + r2.ref).invitePar, undefined);
+  assert.ok(s.appeler({ action: 'inscription', personnes: [ADULTE], payeur: { prenom: 'Paul', nom: 'Ott', email: 'paul@exemple.fr' }, don: 0, reglement: true, invite: '../x' }).redirectUrl);
 });
