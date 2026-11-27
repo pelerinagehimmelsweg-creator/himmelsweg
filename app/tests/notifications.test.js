@@ -12,7 +12,8 @@ test('mêmes modèles pour le service worker et l’app, chacun avec sa photo', 
   vm.runInNewContext(readFileSync(new URL('notifications/modeles.js', publicDir), 'utf8'), ctx);
   assert.deepEqual(JSON.parse(JSON.stringify(ctx.self.MODELES_NOTIFICATION)), MODELES_NOTIFICATION);
   for (const id of Object.keys(MODELES_NOTIFICATION)) assert.ok(existsSync(new URL(`notifications/${id}.jpg`, publicDir)), id);
-  assert.ok(existsSync(new URL('notifications/badge.png', publicDir)));
+  for (const id of Object.keys(MODELES_NOTIFICATION)) assert.ok(existsSync(new URL(`notifications/fond-${id}.jpg`, publicDir)), `fond-${id}`);
+  for (const f of ['badge.png', 'blason.png', 'cinzel-700.woff2', 'affiche.js']) assert.ok(existsSync(new URL(`notifications/${f}`, publicDir)), f);
 });
 
 test('modèle inconnu : annonce ; lien et bouton du modèle sauf s’ils sont donnés', () => {
@@ -33,12 +34,14 @@ test('le service worker affiche le modèle reçu, avec photo, croix et bouton', 
     clients: { matchAll: async () => [], openWindow: async () => {}, claim: async () => {} },
     skipWaiting: () => {},
   };
-  const ctx = { self, importScripts: () => vm.runInNewContext(readFileSync(new URL('notifications/modeles.js', publicDir), 'utf8'), { self }) };
+  const charger = (...urls) => urls.forEach((u) => vm.runInNewContext(readFileSync(new URL(u.slice(1), publicDir), 'utf8'), { self }));
+  const ctx = { self, importScripts: charger, setTimeout, FileReader: undefined };
   vm.runInNewContext(readFileSync(new URL('firebase-messaging-sw.js', publicDir), 'utf8'), ctx);
   let attente;
   ecouteurs.push({ data: { json: () => ({ data: { modele: 'rendezvous', titre: 'Rendez-vous à 7 h 30', texte: 'Messe' } }) }, waitUntil: (p) => (attente = p) });
   await attente;
   assert.equal(montrees[0].titre, '🔔 Rendez-vous à 7 h 30');
+  // Sans dessin possible (ici, pas de toile), on garde la photo simple du modèle.
   assert.equal(montrees[0].image, '/notifications/rendezvous.jpg');
   assert.equal(montrees[0].badge, '/notifications/badge.png');
   assert.equal(montrees[0].actions[0].title, 'Voir la carte');
@@ -53,4 +56,23 @@ test('à son prénom : remplacé, ou retiré proprement si le prénom manque', a
   assert.equal(personnaliser('Merci {prénom} !', undefined), 'Merci !');
   assert.equal(personnaliser('Merci, {prénom}.', ''), 'Merci.');
   assert.equal(personnaliser('Sans marqueur', 'Anne'), 'Sans marqueur');
+});
+
+test('titre sur la photo : sans emoji, sur deux lignes au plus, raccourci si trop long', () => {
+  const ctx = { self: {} };
+  vm.runInNewContext(readFileSync(new URL('notifications/affiche.js', publicDir), 'utf8'), ctx);
+  const { titreAffiche, couper } = ctx.self.AFFICHE_NOTIFICATION;
+  assert.equal(titreAffiche('🔔  Rendez-vous ⚠️ à 7 h 30 '), 'Rendez-vous à 7 h 30');
+  const mesure = (t, taille) => t.length * taille * 0.6; // largeur approchée d'une lettre
+  const court = couper('Anne, rendez-vous à 7 h 30', mesure, 844);
+  assert.equal(court.taille, 68);
+  assert.deepEqual([...court.lignes], ['Anne, rendez-vous', 'à 7 h 30']);
+  const moyen = couper('Paul, la messe de clôture commence à la cathédrale', mesure, 844);
+  assert.equal(moyen.lignes.length, 2);
+  assert.ok(moyen.taille >= 34);
+  const long = couper('mot '.repeat(80).trim(), mesure, 844);
+  assert.equal(long.taille, 34);
+  assert.equal(long.lignes.length, 2);
+  assert.ok(long.lignes[1].endsWith('…'));
+  assert.ok(long.lignes.every((l) => mesure(l, 34) <= 844));
 });

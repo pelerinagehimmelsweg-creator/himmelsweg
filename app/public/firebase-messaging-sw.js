@@ -2,8 +2,9 @@
 // et les affiche selon leur modèle : grande photo encadrée d'or (Android, ordinateur), petite croix
 // dans la barre d'état, bouton vers la bonne page, vibration en trois coups de cloche.
 // Sur iPhone, Apple n'affiche que l'icône, le titre et le texte.
+// Le titre est écrit en lettres dorées sur la photo, dessinée ici même (notifications/affiche.js).
 // Quand l'app est ouverte et visible, elle affiche elle-même une bannière à la place.
-importScripts('/notifications/modeles.js');
+importScripts('/notifications/modeles.js', '/notifications/affiche.js');
 
 const MODELES = self.MODELES_NOTIFICATION;
 const CLOCHE = [260, 140, 260, 140, 420];
@@ -36,6 +37,25 @@ function lire(event) {
   };
 }
 
+/** L'affiche (photo + titre doré) en adresse data:, ou la photo simple si le dessin échoue ou traîne. */
+async function affiche(n) {
+  try {
+    const dessin = self.AFFICHE_NOTIFICATION.dessinerAffiche(n.modele, n.titre).then(
+      (blob) =>
+        new Promise((ok, ko) => {
+          const r = new FileReader();
+          r.onload = () => ok(r.result);
+          r.onerror = ko;
+          r.readAsDataURL(blob);
+        }),
+    );
+    const trop = new Promise((ok) => setTimeout(() => ok(n.image), 4000));
+    return await Promise.race([dessin, trop]);
+  } catch {
+    return n.image;
+  }
+}
+
 self.addEventListener('push', (event) => {
   const n = lire(event);
   event.waitUntil(
@@ -49,7 +69,7 @@ self.addEventListener('push', (event) => {
         body: n.texte,
         icon: '/icone-192.png',
         badge: '/notifications/badge.png',
-        image: n.image,
+        image: surIphone ? undefined : await affiche(n),
         tag: n.id,
         vibrate: CLOCHE,
         data: { lien: n.lien },
