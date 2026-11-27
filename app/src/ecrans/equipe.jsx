@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useAbonnement } from '../composants/base.jsx';
 import { droits } from '../donnees/modele.js';
 import { FILS, UNITES, filsDe, lienCarte, lienSms, listeDeCourses } from '../donnees/equipes.js';
-import { MODELES_NOTIFICATION, notificationAffichee, quandNotification } from '../donnees/notifications.js';
+import { MARQUEUR_PRENOM, MODELES_NOTIFICATION, notificationAffichee, personnaliser, quandNotification } from '../donnees/notifications.js';
 import { Banniere } from '../composants/banniere.jsx';
 
 const a = (session, ...roles) => session.estAdmin || roles.some((r) => session.roles?.includes(r));
@@ -773,12 +773,15 @@ export function EnvoiNotification({ donnees }) {
       {f.cible === 'moi' && <small class="aide">Pour voir le rendu sur votre téléphone : activez d’abord les notifications dans Moi.</small>}
       <label>
         Titre
-        <input maxLength="60" value={f.titre} onInput={(e) => setF({ ...f, titre: e.currentTarget.value })} placeholder="Ex. : Rendez-vous à 7 h 30" />
+        <input id="notif-titre" maxLength="60" value={f.titre} onInput={(e) => setF({ ...f, titre: e.currentTarget.value })} placeholder="Ex. : {prénom}, rendez-vous à 7 h 30" />
       </label>
+      <BoutonPrenom champ="notif-titre" valeur={f.titre} changer={(titre) => setF({ ...f, titre })} />
       <label>
         Message
-        <textarea rows="3" maxLength="300" value={f.texte} onInput={(e) => setF({ ...f, texte: e.currentTarget.value })} />
+        <textarea id="notif-texte" rows="3" maxLength="300" value={f.texte} onInput={(e) => setF({ ...f, texte: e.currentTarget.value })} />
       </label>
+      <BoutonPrenom champ="notif-texte" valeur={f.texte} changer={(texte) => setF({ ...f, texte })} />
+      <small class="aide">« {MARQUEUR_PRENOM} » est remplacé par le prénom de chaque pèlerin (Anne, Paul…).</small>
 
       <section class="apercu-notif">
         <div class="onglets-internes" role="tablist">
@@ -792,7 +795,8 @@ export function EnvoiNotification({ donnees }) {
             </button>
           ))}
         </div>
-        <ApercuNotification n={{ ...n, titre: f.titre || 'Votre titre', texte: f.texte || 'Votre message s’affichera ici.' }} vue={vue} />
+        <ApercuNotification n={{ ...n, titre: personnaliser(f.titre, 'Anne') || 'Votre titre', texte: personnaliser(f.texte, 'Anne') || 'Votre message s’affichera ici.' }} vue={vue} />
+        {/\{pr[ée]nom\}/i.test(f.titre + f.texte) && <small class="aide">Aperçu pour une pèlerine prénommée Anne.</small>}
       </section>
 
       <fieldset class="champ">
@@ -859,6 +863,27 @@ export function EnvoiNotification({ donnees }) {
         </section>
       )}
     </form>
+  );
+}
+
+/** Insère « {prénom} » là où se trouve le curseur (au début d'un titre : « {prénom}, »). */
+function BoutonPrenom({ champ, valeur, changer }) {
+  const inserer = () => {
+    const el = document.getElementById(champ);
+    const v = valeur ?? '';
+    // Curseur placé dans le texte : on insère là ; sinon début du titre ou fin du message.
+    const debut = el && document.activeElement === el && el.selectionStart < v.length ? el.selectionStart : null;
+    if (debut === null) {
+      changer(v ? (champ === 'notif-titre' ? `${MARQUEUR_PRENOM}, ${v.charAt(0).toLowerCase()}${v.slice(1)}` : `${v.replace(/\s+$/, '')} ${MARQUEUR_PRENOM}`) : `${MARQUEUR_PRENOM}, `);
+    } else {
+      const avant = v.slice(0, debut);
+      changer(avant + (avant && !/\s$/.test(avant) ? ' ' : '') + MARQUEUR_PRENOM + v.slice(el.selectionEnd));
+    }
+  };
+  return (
+    <button type="button" class="lien-bouton bouton-prenom" onMouseDown={(e) => e.preventDefault()} onClick={inserer}>
+      + Prénom
+    </button>
   );
 }
 

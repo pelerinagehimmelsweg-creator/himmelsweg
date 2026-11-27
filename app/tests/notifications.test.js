@@ -44,3 +44,13 @@ test('le service worker affiche le modèle reçu, avec photo, croix et bouton', 
   assert.equal(montrees[0].actions[0].title, 'Voir la carte');
   assert.equal(montrees[0].data.lien, '/#/carte');
 });
+
+test('à son prénom : remplacé, ou retiré proprement si le prénom manque', async () => {
+  const { personnaliser } = await import('../src/donnees/notifications.js');
+  assert.equal(personnaliser('{prénom}, rendez-vous à 7 h 30', 'Anne'), 'Anne, rendez-vous à 7 h 30');
+  assert.equal(personnaliser('Bonne nuit {Prenom} !', 'Paul'), 'Bonne nuit Paul !');
+  assert.equal(personnaliser('{prénom}, rendez-vous à 7 h 30', ''), 'Rendez-vous à 7 h 30');
+  assert.equal(personnaliser('Merci {prénom} !', undefined), 'Merci !');
+  assert.equal(personnaliser('Merci, {prénom}.', ''), 'Merci.');
+  assert.equal(personnaliser('Sans marqueur', 'Anne'), 'Sans marqueur');
+});

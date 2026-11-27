@@ -466,3 +466,4 @@ label.formulaire textarea { display: block; width: 100%; margin-top: .25rem; pad
 .programmees li:last-child { border-bottom: 0; }
 .programmees small { display: block; color: var(--gris); }
 .formulaire input[type="datetime-local"] { margin-top: .5rem; }
+.bouton-prenom { display: block; margin: -.6rem 0 .8rem auto; font-size: .9rem; }

@@ -517,10 +517,22 @@ function envoyerProgrammees_() {
  * Envoi par Firebase Cloud Messaging. Le message ne contient que des données : c'est le service worker
  * de l'app (public/firebase-messaging-sw.js) qui l'affiche selon son modèle (photo, croix, bouton).
  */
+/** « {prénom} » devient le prénom du pèlerin ; sans prénom connu, le marqueur disparaît proprement. */
+function personnaliser_(texte, prenom) {
+  const s = String(texte || '');
+  if (!/\{pr[ée]nom\}/i.test(s)) return s;
+  if (prenom) return s.replace(/\{pr[ée]nom\}/gi, prenom);
+  const r = s.replace(/\{pr[ée]nom\}\s*,\s*/gi, '').replace(/,?\s*\{pr[ée]nom\}/gi, '').trim();
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+
 function envoyerNotifications_(ids, titre, texte, options) {
   const o = options || {};
   const modele = MODELES_NOTIFICATION.indexOf(o.modele) !== -1 ? o.modele : 'annonce';
   const donnees = { id: Utilities.getUuid(), modele, titre, texte };
+  // Notification à son prénom : un message par personne.
+  const prenoms = {};
+  if (/\{pr[ée]nom\}/i.test(titre + texte)) listerCollection_('membres').forEach((m) => (prenoms[m.id] = String(m.prenom || '').trim()));
   if (o.lien) donnees.lien = o.lien;
   if (o.bouton) donnees.bouton = o.bouton;
   const voulus = {};
@@ -536,7 +548,7 @@ function envoyerNotifications_(ids, titre, texte, options) {
       payload: JSON.stringify({
         message: {
           token: j.token,
-          data: donnees,
+          data: Object.assign({}, donnees, { titre: personnaliser_(titre, prenoms[j.id]), texte: personnaliser_(texte, prenoms[j.id]) }),
           webpush: { headers: { Urgency: 'high', TTL: '86400' } },
         },
       }),

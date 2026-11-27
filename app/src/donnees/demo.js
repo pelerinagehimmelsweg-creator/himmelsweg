@@ -6,6 +6,7 @@ import { droits, estChoriste, sansRolesDeChapitre } from './modele.js';
 import { REPERES_EXEMPLE, TRACES_EXEMPLE } from './carte.js';
 import { PARCOURS_DEPART, REPAS_CONFIG_DEPART, compterRegimes, texteAlerte } from './equipes.js';
 import { CONFIG_DEPART, QUESTIONS_DEPART, erreursPersonne, totalPanier, versFiche } from './questionnaire.js';
+import { personnaliser } from './notifications.js';
 
 const CLE = 'himmelsweg-demo-v9';
 const CLE_SESSION = 'himmelsweg-demo-session';
@@ -469,7 +470,7 @@ export function creerDemo() {
         (m) => m.statut !== 'en_attente' && (cible === 'tous' || (cible === 'chapitre' && m.chapitre === valeur) || (cible === 'role' && (m.roles?.includes(valeur) || (valeur === 'chorale' && estChoriste(m))))),
       ).length;
       // Démo : la bannière s'affiche sur cet écran, comme chez les pèlerins qui ont l'app ouverte.
-      dispatchEvent(new CustomEvent('himmelsweg-notification', { detail: { modele, titre, texte } }));
+      dispatchEvent(new CustomEvent('himmelsweg-notification', { detail: { modele, titre: personnaliser(titre, 'Anne'), texte: personnaliser(texte, 'Anne') } }));
       return { envoyes: cible === 'moi' ? 1 : n, demo: true };
     },
     ecouterProgrammees: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.programmees] : []), cb),

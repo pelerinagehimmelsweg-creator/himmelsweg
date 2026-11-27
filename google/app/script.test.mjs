@@ -706,3 +706,17 @@ test('notifications programmées : envoyées une fois quand l’heure est passé
   assert.ok(s.lire('programmees/p1').envoyee);
   assert.equal(s.lire('programmees/p2').envoyee, undefined);
 });
+
+test('notifications à son prénom : chaque pèlerin reçoit la sienne, même règle que l’app', async () => {
+  const { personnaliser } = await import('../../app/src/donnees/notifications.js');
+  const s = charger({ base: { ...EQUIPE, 'jetons/google-uid': { token: 'tok-admin' } }, sessions: SESSIONS });
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'chapitre', valeur: 'A', titre: '{prénom}, rendez-vous à 7 h 30', texte: 'Bonne route {prénom} !', modele: 'rendezvous' });
+  const parJeton = Object.fromEntries(s.envoisFcm.map((m) => [m.token, m.data]));
+  assert.equal(parJeton['tok-pel1'].titre, 'Paul, rendez-vous à 7 h 30');
+  assert.equal(parJeton['tok-secu'].texte, 'Bonne route Charles !');
+  assert.equal(parJeton['tok-logi'].titre, personnaliser('{prénom}, rendez-vous à 7 h 30', 'Damien'));
+  s.envoisFcm.length = 0;
+  s.appeler({ action: 'notifier', idToken: 'jeton-admin', cible: 'moi', titre: '{prénom}, essai', texte: 'Merci {prénom} !' });
+  assert.equal(s.envoisFcm[0].data.titre, 'Essai'); // l'admin n'a pas de fiche : pas de prénom
+  assert.equal(s.envoisFcm[0].data.texte, 'Merci !');
+});
