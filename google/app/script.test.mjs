@@ -353,10 +353,14 @@ test('paiement reçu : fiches inscrites et un lien par personne, une seule fois'
   let paye = false;
   const s = charger({ base: BASE_DEPART, paye: () => paye });
   const { ref } = s.appeler({ action: 'inscription', personnes: [ADULTE, MINEURE], payeur: PAYEUR, reglement: true });
-  assert.equal(s.appeler({ action: 'verifier', ref }).statut, 'en_attente');
+  const avant = s.appeler({ action: 'verifier', ref });
+  assert.equal(avant.statut, 'en_attente');
+  assert.equal(avant.inscrits, undefined);
   paye = true;
   const v = s.appeler({ action: 'verifier', ref });
   assert.equal(v.statut, 'paye');
+  // Page de bienvenue : nombre total d'inscrits (base de départ + ces deux personnes).
+  assert.ok(v.inscrits >= 2);
   const dossier = s.lire(`dossiers/${ref}`);
   assert.equal(dossier.liensEnvoyes, true);
   dossier.membres.forEach((id) => assert.equal(s.lire(`membres/${id}`).statut, 'inscrit'));

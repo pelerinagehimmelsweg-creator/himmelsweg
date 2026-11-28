@@ -8,7 +8,7 @@ import photoH from "../composants/invitation-h.jpg";
 import { joursAvant } from "../donnees/modele.js";
 import { motInvitation } from "./soutien.jsx";
 import { ALSACE } from "../composants/alsace.js";
-import { CHEMIN, projection } from "../composants/accueil-invite.jsx";
+import { CHEMIN, ETAPES, projection } from "../composants/accueil-invite.jsx";
 
 const L = 1080;
 const H = 1920;
@@ -27,9 +27,9 @@ export function lienInvitation(session, mode) {
 }
 
 export const messageInvitation = (prenom, lien) =>
-  `${prenom ? `${prenom} t’invite` : "Je t’invite"} sur le chemin du Ciel 🙏\n` +
+  `${prenom ? `${prenom} vous invite` : "Je vous invite"} sur le chemin du Ciel 🙏\n` +
   `Les 7, 8 et 9 mai 2027, trois jours à pied de Scherwiller à Colmar avec le pèlerinage Himmelsweg.\n` +
-  `Rejoins-moi : ${lien}`;
+  `Rejoignez-moi : ${lien}`;
 
 const charger = (src) =>
   new Promise((ok, ko) => {
@@ -80,24 +80,151 @@ export async function preparer({ groupe }) {
   return { photo, blason };
 }
 
-// Petite carte de l'Alsace (250 × 360), avec le chemin et la longueur des tracés pour les dessiner peu à peu.
-const CARTE = (() => {
-  const l = 250;
-  const h = 360;
-  const proj = projection(ALSACE, l, h, 6);
-  const long = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
-  const a = ALSACE.map(proj);
-  const tr = CHEMIN.map(proj);
-  const chemin = (pts) => `M${pts.map((p) => p.join(" ")).join(" L")}`;
-  const P = typeof Path2D === "undefined" ? String : (d) => new Path2D(d);
-  return { l, h, contour: P(`${chemin(a)} Z`), trace: P(chemin(tr)), longContour: long([...a, a[0]]), longTrace: long(tr), arrivee: tr.at(-1) };
-})();
-
 // Durée de l'animation (vidéo) ; à la fin, l'image est exactement l'image fixe.
 export const DUREE_VIDEO = 7;
 const doux = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 /** Avancement (0 → 1) d'un élément qui apparaît à « debut » pendant « duree » secondes. */
 export const avance = (t, debut, duree = 0.7) => doux((t - debut) / duree);
+
+const ROUGE = "#b32d24";
+const CREME = "#fffdf8";
+const ENCRE = "#231c18";
+const KX = Math.cos((48.25 * Math.PI) / 180);
+/** Projection qui cadre le chemin (et non toute l'Alsace) dans un rectangle. */
+function projectionChemin(l, h, ml, mr, my) {
+  const xs = CHEMIN.map(([, lon]) => lon * KX);
+  const ys = CHEMIN.map(([lat]) => -lat);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const e = Math.min((l - ml - mr) / (x1 - x0), (h - 2 * my) / (y1 - y0));
+  const dx = ml + (l - ml - mr - (x1 - x0) * e) / 2;
+  const dy = (h - (y1 - y0) * e) / 2;
+  return ([lat, lon]) => [dx + (lon * KX - x0) * e, dy + (-lat - y0) * e];
+}
+const trace = (c, pts) => {
+  c.beginPath();
+  pts.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
+};
+const longueur = (pts) => pts.slice(1).reduce((s, p, k) => s + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+const JOURS_COURTS = ["Ven. 7 mai", "Sam. 8 mai", "Dim. 9 mai", ""];
+
+/** Le chemin en gros plan dans (l × h) : tracé rouge, étapes, noms et jours. kt : part du tracé dessinée. */
+function cheminGrosPlan(c, l, h, kt, sans, { ml = 80, mr = 190, my = 60, taille = 30, photo = false } = {}) {
+  const proj = projectionChemin(l, h, ml, mr, my);
+  const pts = CHEMIN.map(proj);
+  const lg = longueur(pts);
+  c.lineJoin = "round";
+  c.lineCap = "round";
+  c.setLineDash([lg * kt, lg]);
+  if (photo) {
+    // Sur la photo : un liseré crème autour du tracé pour qu'il se détache.
+    c.strokeStyle = CREME;
+    c.lineWidth = 17;
+    trace(c, pts);
+    c.stroke();
+  }
+  c.strokeStyle = ROUGE;
+  c.lineWidth = 9;
+  trace(c, pts);
+  c.stroke();
+  c.setLineDash([]);
+  // Une étape apparaît quand le tracé l'atteint.
+  let cumul = 0;
+  const parts = pts.map((p, k) => (k ? (cumul += Math.hypot(p[0] - pts[k - 1][0], p[1] - pts[k - 1][1])) / lg : 0));
+  ETAPES.forEach((e, k) => {
+    const a = Math.min(1, Math.max(0, (kt - parts[e.i]) * 8 + (kt >= 1 ? 1 : 0)));
+    if (a <= 0) return;
+    const [x, y] = pts[e.i];
+    const arrivee = k === ETAPES.length - 1;
+    const dessous = k === 2; // Turckheim : étiquette sous le point, les autres à droite.
+    c.save();
+    c.globalAlpha *= a;
+    c.fillStyle = arrivee ? ROUGE : CREME;
+    c.strokeStyle = ROUGE;
+    c.lineWidth = 6;
+    c.beginPath();
+    c.arc(x, y, arrivee ? 15 : 12, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    if (arrivee) {
+      c.beginPath();
+      c.moveTo(x, y - 18);
+      c.lineTo(x, y - 50);
+      c.moveTo(x - 10, y - 39);
+      c.lineTo(x + 10, y - 39);
+      c.lineWidth = 5;
+      c.stroke();
+    }
+    c.textAlign = "left";
+    const tx = dessous ? x - 14 : x + 26;
+    const ty = dessous ? y + 66 : y + 8;
+    if (photo) {
+      c.shadowColor = "rgba(0,0,0,.95)";
+      c.shadowBlur = 14;
+    }
+    c.fillStyle = photo ? "#fff" : ENCRE;
+    c.font = sans(700, taille);
+    c.fillText(e.nom, tx, ty);
+    c.fillStyle = photo ? "#f6f1e4" : ROUGE;
+    c.font = sans(600, taille * 0.78);
+    c.fillText(JOURS_COURTS[k], tx, ty + taille * 1.05);
+    c.restore();
+  });
+}
+
+/** Silhouette de l'Alsace (l de large), le chemin en rouge dedans. */
+function petiteAlsace(c, l, fond, kc, kt, epais = 5) {
+  const h = l * 1.44;
+  const proj = projection(ALSACE, l, h, 2);
+  const a = ALSACE.map(proj);
+  const tr = CHEMIN.map(proj);
+  c.lineJoin = "round";
+  c.lineCap = "round";
+  trace(c, a);
+  c.closePath();
+  if (fond) {
+    c.fillStyle = fond;
+    c.fill();
+  }
+  const la = longueur([...a, a[0]]);
+  c.setLineDash([la * kc, la]);
+  c.stroke();
+  c.setLineDash([]);
+  if (kt > 0) {
+    const lt = longueur(tr);
+    c.setLineDash([lt * kt, lt]);
+    c.strokeStyle = ROUGE;
+    c.lineWidth = epais;
+    trace(c, tr);
+    c.stroke();
+    c.setLineDash([]);
+  }
+  return { h, tr };
+}
+
+/** Carte de l'invitation, en haut à droite. t = Infinity : image fixe. */
+function dessinerCarte(c, t, sans) {
+  const fixe = t === Infinity;
+  const kc = fixe ? 1 : avance(t, 0.5, 1.2);
+  const kt = fixe ? 1 : avance(t, 1.5, 1.8);
+  if (kc <= 0) return;
+  c.save();
+  // Le chemin en gros plan, tracé directement sur la photo ; l'Alsace en petit au-dessus pour situer.
+  const l = 380;
+  const h = 560;
+  c.globalAlpha = kc;
+  c.translate(L - 70 - l, 260);
+  c.save();
+  c.translate(l - 100, 0);
+  c.shadowColor = "rgba(0,0,0,.4)";
+  c.shadowBlur = 8;
+  c.strokeStyle = CREME;
+  c.lineWidth = 2;
+  petiteAlsace(c, 64, "rgba(255,253,248,.85)", 1, 1, 4);
+  c.restore();
+  c.globalAlpha = 1;
+  cheminGrosPlan(c, l, h, kt, sans, { ml: 90, mr: 180, my: 90, photo: true });
+  c.restore();
+}
 
 /** Dessine l'invitation (1080 × 1920, format story Instagram et WhatsApp), à l'instant t de l'animation. */
 export async function dessiner(canvas, opts, t = Infinity, res) {
@@ -139,41 +266,8 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
   c.fillStyle = g;
   c.fillRect(0, 0, L, H);
 
-  // Carte de l'Alsace avec le chemin en rouge, en haut à droite.
-  const kc = fixe ? 1 : avance(t, 0.5, 1.4);
-  const kt = fixe ? 1 : avance(t, 1.7, 1.4);
-  if (kc > 0) {
-    const ox = L - 80 - CARTE.l;
-    const oy = 290;
-    c.save();
-    c.translate(ox, oy);
-    c.lineJoin = "round";
-    c.lineCap = "round";
-    c.shadowColor = "rgba(0,0,0,.35)";
-    c.shadowBlur = 10;
-    c.fillStyle = `rgba(255,253,248,${0.9 * (fixe ? 1 : doux((t - 1.2) / 0.6))})`;
-    c.fill(CARTE.contour);
-    c.shadowBlur = 0;
-    c.strokeStyle = "#fffdf8";
-    c.lineWidth = 3;
-    c.setLineDash([CARTE.longContour * kc, CARTE.longContour]);
-    c.stroke(CARTE.contour);
-    if (kt > 0) {
-      c.setLineDash([CARTE.longTrace * kt, CARTE.longTrace]);
-      c.strokeStyle = "#b32d24";
-      c.lineWidth = 7;
-      c.stroke(CARTE.trace);
-      c.setLineDash([]);
-      if (kt >= 1) {
-        const [x, y] = CARTE.arrivee;
-        c.fillStyle = "#b32d24";
-        c.beginPath();
-        c.arc(x, y, 10, 0, Math.PI * 2);
-        c.fill();
-      }
-    }
-    c.restore();
-  }
+  // Carte du pèlerinage, en haut à droite.
+  dessinerCarte(c, fixe ? Infinity : t, sans);
 
   // En-tête : blason et nom, compte à rebours.
   apparait(0.2, () => {
@@ -234,10 +328,10 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
   apparait(4.5, () => {
     c.fillStyle = "#fff";
     c.font = sans(700, 44);
-    c.fillText("Rejoins-moi", 360, yQr + 70);
+    c.fillText("Rejoignez-moi", 360, yQr + 70);
     c.fillStyle = "#fff";
     c.font = sans(400, 34);
-    c.fillText("Scanne ou touche le lien", 360, yQr + 122);
+    c.fillText("Scannez ou touchez le lien", 360, yQr + 122);
     c.fillText("Inscription en 5 minutes", 360, yQr + 168);
   });
 
@@ -256,13 +350,16 @@ export async function dessiner(canvas, opts, t = Infinity, res) {
     }
   }, 0.9);
 
-  const titre = ["Trois jours.", "Un chemin.", "Et toi ?"];
+  const titre = ["Trois jours.", "Un pèlerinage.", "Et vous ?"];
   y -= 80 + 104 * (titre.length - 1);
+  // Taille ajustée pour que la plus longue ligne tienne dans la largeur.
+  c.font = "700 96px Cinzel";
+  const taille = Math.min(96, Math.floor((96 * (L - 160)) / Math.max(...titre.map((l) => c.measureText(l).width))));
   titre.forEach((l, i) => {
     apparait(1.1 + i * 0.55, () => {
-      c.font = "700 96px Cinzel";
+      c.font = `700 ${taille}px Cinzel`;
       if (i === 2) {
-        // « Et toi ? » en blanc sur un bandeau rouge du blason.
+        // « Et vous ? » en blanc sur un bandeau rouge du blason.
         const lt = c.measureText(l).width;
         c.fillStyle = "#b32d24";
         arrondi(c, 56, y + i * 104 - 84, lt + 48, 108, 14);
@@ -522,7 +619,7 @@ export function Inviter({ donnees, session }) {
             </a>
             <a
               class="bouton secondaire"
-              href={`mailto:?subject=${encodeURIComponent("Viens marcher avec moi vers le Ciel")}&body=${texte}`}
+              href={`mailto:?subject=${encodeURIComponent("Venez marcher avec moi vers le Ciel")}&body=${texte}`}
             >
               E-mail
             </a>

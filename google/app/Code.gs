@@ -270,7 +270,10 @@ function etatPaiement_(ref, dossier) {
       dossier.statut = 'paye';
     }
   }
-  return { statut: dossier.statut, montant: dossier.montant, noms: dossier.noms || [] };
+  const etat = { statut: dossier.statut, montant: dossier.montant, noms: dossier.noms || [] };
+  // Pour la page de bienvenue : combien de pèlerins sont inscrits en tout (sans aucun nom).
+  if (dossier.statut !== 'en_attente') etat.inscrits = listerCollection_('membres').filter((m) => m.statut === 'inscrit').length;
+  return etat;
 }
 
 function intentionPayee_(id) {

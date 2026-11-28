@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Texte, useAbonnement } from '../composants/base.jsx';
 import { ChampQuestion } from '../composants/champs.jsx';
-import { AccueilInvite } from '../composants/accueil-invite.jsx';
+import { AccueilInvite, CarteAnimee } from '../composants/accueil-invite.jsx';
+import { joursAvant } from '../donnees/modele.js';
 import logo from '../composants/logo.png';
 import { ageDe, erreursPersonne, estVisible, euros, questionsTriees, tarifsPour, totalPanier } from '../donnees/questionnaire.js';
 
@@ -450,12 +451,93 @@ function Merci({ donnees, ref_ }) {
   return <Confirmation etat={etat} donnees={donnees} />;
 }
 
+/** Prénoms pour « Bienvenue Paul et Françoise ! » (les noms sont « Prénom Nom »). */
+export function prenomsBienvenue(noms = []) {
+  const p = [...new Set(noms.map((n) => String(n).trim().split(/\s+/)[0]).filter(Boolean))];
+  return p.length <= 1 ? p[0] ?? '' : `${p.slice(0, -1).join(', ')} et ${p.at(-1)}`;
+}
+
+/** Nombre qui monte jusqu'à « fin » en environ 1,5 s, après « delai » secondes. */
+function useCompteur(fin, delai) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!fin) return;
+    if (matchMedia?.('(prefers-reduced-motion: reduce)').matches) return setN(fin);
+    let image;
+    const t = setTimeout(() => {
+      const debut = performance.now();
+      const pas = () => {
+        const k = Math.min(1, (performance.now() - debut) / 1500);
+        setN(Math.round(fin * (1 - Math.pow(1 - k, 3))));
+        if (k < 1) image = requestAnimationFrame(pas);
+      };
+      image = requestAnimationFrame(pas);
+    }, delai * 1000);
+    return () => {
+      clearTimeout(t);
+      cancelAnimationFrame(image);
+    };
+  }, [fin]);
+  return n;
+}
+
+/** Page de bienvenue animée, juste après le paiement. */
+function Bienvenue({ etat }) {
+  const prenoms = prenomsBienvenue(etat.noms);
+  const titre = prenoms ? `Bienvenue ${prenoms} !` : 'Bienvenue !';
+  const mots = titre.split(' ');
+  const debuts = mots.map((_, m) => mots.slice(0, m).join(' ').length + (m ? 1 : 0));
+  const inscrits = Number(etat.inscrits) || 0;
+  const compte = useCompteur(inscrits, 6);
+  const jours = joursAvant();
+  const plusieurs = (etat.noms?.length ?? 0) > 1;
+  const partager = async () => {
+    const texte = `${plusieurs ? 'Nous venons' : 'Je viens'} de ${plusieurs ? 'nous' : 'm’'}inscrire au pèlerinage Himmelsweg, les 7, 8 et 9 mai 2027, sur le chemin du Ciel. Venez marcher avec ${plusieurs ? 'nous' : 'moi'} !`;
+    const url = 'https://himmelsweg.fr/';
+    try {
+      if (navigator.share) await navigator.share({ text: texte, url });
+      else open(`https://wa.me/?text=${encodeURIComponent(`${texte} ${url}`)}`, '_blank', 'noopener');
+    } catch {
+      // partage annulé
+    }
+  };
+  return (
+    <section class="bienvenue">
+      <h1 class="ai-titre" aria-label={titre}>
+        {mots.map((mot, m) => (
+          <span key={m} class="ai-mot" aria-hidden="true">
+            {[...mot].map((l, k) => (
+              <span key={k} style={{ animationDelay: `${0.2 + (debuts[m] + k) * 0.045}s` }}>
+                {l}
+              </span>
+            ))}
+          </span>
+        ))}
+      </h1>
+      <p class="ai-sous">sur le chemin du Ciel</p>
+      <CarteAnimee decalage={-0.4} />
+      {inscrits > 0 && (
+        <p class="bv-compte">
+          <span>Avec vous, nous sommes</span>
+          <strong>{compte}</strong>
+          <span>pèlerins inscrits</span>
+        </p>
+      )}
+      {jours > 0 && <p class="bv-jours">Départ dans {jours} jour{jours > 1 ? 's' : ''}</p>}
+      <button type="button" class="bouton bv-partager" onClick={partager}>
+        Partager la nouvelle
+      </button>
+    </section>
+  );
+}
+
 function Confirmation({ etat, donnees }) {
   const config = useAbonnement((cb) => donnees.ecouterConfig(cb), [donnees], null);
   return (
     <>
+      <Bienvenue etat={etat} />
       <section class="carte">
-        <h1>Merci, c’est fait !</h1>
+        <h2>Votre inscription est confirmée</h2>
         <p>
           L’inscription de <strong>{etat.noms.join(', ')}</strong> est confirmée.
         </p>

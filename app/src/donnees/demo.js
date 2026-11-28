@@ -159,7 +159,8 @@ export function creerDemo() {
     const liensDemo = ['paye', 'gratuit', 'valide_main'].includes(d.statut)
       ? d.membres.map((id, i) => ({ nom: d.noms[i], url: `${location.origin}/?demo#cle=${lienDe(id)}` }))
       : [];
-    return { statut: d.statut, montant: d.montant, noms: d.noms, liensDemo };
+    const inscrits = etat.membres.filter((m) => m.statut === 'inscrit').length;
+    return { statut: d.statut, montant: d.montant, noms: d.noms, liensDemo, inscrits };
   };
 
   return {
