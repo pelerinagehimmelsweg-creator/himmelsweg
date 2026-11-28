@@ -54,8 +54,6 @@ const SIGNATURES = [
           prière et de chants, dans les vignes et les villages de notre région.
         </p>
 
-        <Carrousel photos={PHOTOS} />
-
         <div class="l-carte"><CarteChemin mode="accueil" /></div>
 
         <p>
@@ -87,6 +85,8 @@ const SIGNATURES = [
           <a class="bouton l-aider" href="/entreprises/#aider">Nous souhaitons aider</a>
           <a class="bouton bouton-clair-fonce" href="/le-pelerinage/">Découvrir le pèlerinage</a>
         </div>
+
+        <div class="l-photos"><Carrousel photos={PHOTOS} /></div>
       </div>
     </div>
   </article>
@@ -136,6 +136,7 @@ const SIGNATURES = [
   .l-signatures { display: flex; justify-content: space-around; gap: 1.5rem; flex-wrap: wrap; margin: 1.8rem 0 2rem; text-align: center; }
   .l-nom { font-family: var(--titre); font-weight: 700; font-size: 1.25rem; color: var(--rouge-fonce); }
   .l-role { font-size: .95rem; color: #6b6158; }
+  .l-photos { margin-top: 2.5rem; }
   .l-actions { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; }
   .bouton-clair-fonce { background: transparent; color: var(--rouge); border: 2px solid var(--rouge); }
 
