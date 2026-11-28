@@ -139,6 +139,10 @@ export function Moi({ donnees, session }) {
           </button>
         )}
       </div>
+
+      <p class="credit-photos">
+        Photos © <a href="https://lucieclaissephotographies.pixieset.com/" target="_blank" rel="noopener">Lucie Claisse</a>
+      </p>
     </>
   );
 }

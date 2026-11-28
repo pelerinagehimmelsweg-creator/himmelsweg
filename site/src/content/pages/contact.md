@@ -1,7 +1,7 @@
 ---
 title: Contact
 description: Contacter le secrétariat du pèlerinage Himmelsweg.
-banniere: ../../assets/photos/vignes-automne.jpg
+banniere: ../../assets/photos/vignes-paysage.jpg
 formulaire: contact
 ---
 ## Pèlerinage Himmelsweg

@@ -1,6 +1,8 @@
 ---
 title: Inscription
 description: Inscription au pèlerinage Himmelsweg, 7-8-9 mai 2027. Inscription uniquement en ligne.
+banniere: ../../assets/photos/vignes-banniere-doree.jpg
+position_banniere: center 25%
 ---
 L'inscription se fait uniquement en ligne. Vous pouvez inscrire plusieurs personnes à la fois (par exemple toute une famille), hommes et femmes, puis payer en une seule fois. Le paiement est sécurisé par HelloAsso.
 

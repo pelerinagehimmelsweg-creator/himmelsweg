@@ -3,12 +3,21 @@ import qrcode from "qrcode-generator";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { useAbonnement } from "../composants/base.jsx";
 import logo from "../composants/logo.png";
-import photoF from "../composants/invitation-f.jpg";
-import photoH from "../composants/invitation-h.jpg";
+import f1 from "../composants/photos/f1.jpg";
+import f2 from "../composants/photos/f2.jpg";
+import f3 from "../composants/photos/f3.jpg";
+import f4 from "../composants/photos/f4.jpg";
+import h1 from "../composants/photos/h1.jpg";
+import h2 from "../composants/photos/h2.jpg";
+import h3 from "../composants/photos/h3.jpg";
 import { joursAvant } from "../donnees/modele.js";
 import { motInvitation } from "./soutien.jsx";
 import { ALSACE } from "../composants/alsace.js";
 import { CHEMIN, ETAPES, projection } from "../composants/accueil-invite.jsx";
+
+// Photos au choix pour l'invitation (Photos © Lucie Claisse) : silhouettes de dos pour les pèlerines,
+// paysages et bannière pour les pèlerins.
+export const PHOTOS_INVITATION = { F: [f1, f2, f3, f4], H: [h1, h2, h3] };
 
 const L = 1080;
 const H = 1920;
@@ -67,14 +76,14 @@ function arrondi(ctx, x, y, l, h, r) {
 }
 
 /** Photos, blason et polices, chargés une fois par dessin ou par vidéo. */
-export async function preparer({ groupe }) {
+export async function preparer({ groupe, photo: n = 0 }) {
   await Promise.all([
     document.fonts.load("700 96px Cinzel"),
     document.fonts.load('400 42px "Source Sans 3 Variable"'),
     document.fonts.load('700 42px "Source Sans 3 Variable"'),
   ]);
   const [photo, blason] = await Promise.all([
-    charger(groupe === "H" ? photoH : photoF),
+    charger((PHOTOS_INVITATION[groupe] ?? PHOTOS_INVITATION.F)[n] ?? PHOTOS_INVITATION.F[0]),
     charger(logo),
   ]);
   return { photo, blason };
@@ -443,7 +452,8 @@ export function Inviter({ donnees, session }) {
   const message = messageInvitation(session.prenom, lien);
   const amis = Number(session.amisInscrits) || 0;
 
-  const opts = { groupe, prenom, mot, lien, jours: joursAvant() };
+  const [photo, setPhoto] = useState(0);
+  const opts = { groupe, prenom, mot, lien, jours: joursAvant(), photo };
   const [video, setVideo] = useState(null); // null, ou avancement de l'enregistrement (0 → 1)
   const peutVideo = useMemo(() => !admin && !!formatVideo(), [admin]);
 
@@ -455,7 +465,7 @@ export function Inviter({ donnees, session }) {
       .then(() => !arret.stop && setPret(true))
       .catch(() => setMsg("L’image n’a pas pu être préparée."));
     return () => (arret.stop = true);
-  }, [mot, groupe]);
+  }, [mot, groupe, photo]);
 
   // Deux temps : on prépare la vidéo (8 s), puis on la partage d'une nouvelle touche
   // (les téléphones n'ouvrent le partage que juste après qu'on a touché l'écran).
@@ -560,19 +570,34 @@ export function Inviter({ donnees, session }) {
           aria-label="Image d’invitation"
         />
       </div>
+      <div class="choix-photo" role="group" aria-label="Choisir la photo">
+        {(PHOTOS_INVITATION[groupe] ?? PHOTOS_INVITATION.F).map((src, n) => (
+          <button
+            key={src}
+            type="button"
+            class={n === photo ? "choisie" : ""}
+            aria-pressed={n === photo}
+            aria-label={`Photo ${n + 1}`}
+            disabled={video !== null}
+            onClick={() => setPhoto(n)}
+          >
+            <img src={src} alt="" />
+          </button>
+        ))}
+      </div>
       {admin && (
         <div class="actions">
           <button
             type="button"
             class={`bouton petit ${groupe === "F" ? "" : "secondaire"}`}
-            onClick={() => setGroupeApercu("F")}
+            onClick={() => { setGroupeApercu("F"); setPhoto(0); }}
           >
             Pèlerines
           </button>
           <button
             type="button"
             class={`bouton petit ${groupe === "H" ? "" : "secondaire"}`}
-            onClick={() => setGroupeApercu("H")}
+            onClick={() => { setGroupeApercu("H"); setPhoto(0); }}
           >
             Pèlerins
           </button>
