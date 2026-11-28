@@ -63,6 +63,10 @@ function lireEtat() {
     photos: [],
     configBilan: {},
     programmees: [],
+    recommandations: [
+      { id: 'r1', de: 'Paul', email: 'paul@exemple.fr', entreprise: 'Boulangerie Muller', mot: 'Vous aimez notre région et ses traditions, je pense que ce projet vous plaira.', date: '2026-11-27T18:12:00Z' },
+      { id: 'r2', de: 'Claire', email: 'claire@exemple.fr', entreprise: 'Garage Schmitt', mot: '', date: '2026-11-26T09:40:00Z' },
+    ],
     ...bilanExemple(membres),
   };
 }
@@ -91,7 +95,7 @@ export function creerDemo() {
   const session = () => {
     if (!sessionId) return null;
     if (sessionId === 'admin-directrice') {
-      return { id: sessionId, prenom: 'La directrice', nom: '', estAdmin: true, roles: [] };
+      return { id: sessionId, prenom: 'La présidente', nom: '', estAdmin: true, roles: [] };
     }
     const m = etat.membres.find((x) => x.id === sessionId);
     return m ? { ...m, estAdmin: false } : null;
@@ -379,6 +383,12 @@ export function creerDemo() {
       if (etat.bilanFait.some((f) => f.id === s.id)) throw new Error('Vous avez déjà répondu.');
       etat.bilan.push({ ...r, id: r.anonyme ? `b-${Date.now().toString(36)}` : s.id });
       etat.bilanFait.push({ id: s.id, jour: r.jour });
+      sauver();
+    },
+    ecouterRecommandations: (cb) => ecouter(() => (session()?.estAdmin ? [...(etat.recommandations ?? [])] : []), cb),
+    async supprimerRecommandation(id) {
+      exigerAdmin();
+      etat.recommandations = (etat.recommandations ?? []).filter((r) => r.id !== id);
       sauver();
     },
     ecouterBilans: (cb) => ecouter(() => (session()?.estAdmin ? [...etat.bilan] : []), cb),

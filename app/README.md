@@ -6,7 +6,7 @@ Une seule app pour tout le monde : chacun voit ce que ses rôles lui permettent.
 ## L'essayer tout de suite (mode démo)
 
 Sans réglage, l'app démarre en **mode démo** avec 24 pèlerins fictifs : on choisit une personne
-(directrice, repas, logistique, chef de chapitre, adjoint sécurité, pèlerine) pour voir ce qu'elle voit.
+(présidente, repas, logistique, chef de chapitre, adjoint sécurité, pèlerine) pour voir ce qu'elle voit.
 Rien n'est envoyé nulle part : tout reste dans le navigateur.
 
 ```bash

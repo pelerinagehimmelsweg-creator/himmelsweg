@@ -1,0 +1,270 @@
+---
+// Page Entreprises : un visiteur recommande le pèlerinage à un chef d'entreprise qu'il connaît.
+// Il laisse son e-mail (gardé pour les admins dans l'app) et obtient un lien personnel vers la lettre et une image à partager.
+import logo from '../assets/logo-blason.png';
+import { LIMITES } from '../lib/lettre';
+---
+<section class="recommander" id="recommander">
+  <div class="rec-tete">
+    <img class="rec-logo" src={logo.src} alt="" width="56" height="56" />
+    <div>
+      <h2>Vous connaissez un chef d'entreprise ?</h2>
+      <p>
+        Recommandez-lui le pèlerinage en deux minutes. Il recevra une lettre à son nom, signée par la présidente et l'aumônier,
+        qui lui présente le pèlerinage et les façons de l'aider.
+      </p>
+    </div>
+  </div>
+
+  <form class="formulaire rec-form">
+    <div class="rec-champs">
+      <div>
+        <label for="rec-de">Votre prénom *</label>
+        <input id="rec-de" name="de" required maxlength={LIMITES.de} autocomplete="given-name" />
+      </div>
+      <div>
+        <label for="rec-a">Nom de l'entreprise *</label>
+        <input id="rec-a" name="a" required maxlength={LIMITES.a} placeholder="Par exemple : Boulangerie Muller" />
+      </div>
+    </div>
+    <div>
+      <label for="rec-email">Votre e-mail *</label>
+      <input id="rec-email" name="email" type="email" required maxlength={LIMITES.email} autocomplete="email" />
+      <p class="rec-aide">Pour vous remercier et vous dire si l'entreprise nous a rejoints. Il n'est ni publié ni transmis.</p>
+    </div>
+    <div>
+      <label for="rec-mot">Votre petit mot (facultatif)</label>
+      <textarea id="rec-mot" name="mot" rows="3" maxlength={LIMITES.mot} placeholder="Par exemple : Je pense à vous, car vous aimez notre région et ses traditions."></textarea>
+    </div>
+    <div><button class="bouton" type="submit">Préparer la lettre</button></div>
+  </form>
+
+  <div class="rec-resultat" hidden>
+    <canvas class="rec-image" width="1080" height="1350" aria-label="Image de la lettre de recommandation"></canvas>
+    <div class="rec-envoi">
+      <p class="rec-pret">Votre lettre est prête. Envoyez-la :</p>
+      <button type="button" class="bouton rec-partager">Partager la lettre</button>
+      <div class="rec-boutons">
+        <a class="bouton bouton-contour rec-whatsapp" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="bouton bouton-contour rec-email">E-mail</a>
+        <a class="bouton bouton-contour rec-sms">SMS</a>
+        <button type="button" class="bouton bouton-contour rec-copier">Copier le lien</button>
+      </div>
+      <p class="rec-astuce">
+        Astuce : sur WhatsApp, joignez aussi l'image de la lettre (bouton « Partager la lettre » sur téléphone, ou
+        <a href="#" class="rec-telecharger">enregistrer l'image</a>).
+      </p>
+      <p class="rec-voir"><a class="rec-lien" target="_blank" rel="noopener">Voir la lettre telle qu'il la recevra ›</a></p>
+      <p class="rec-statut" role="status"></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { emailValide, enregistrerRecommandation, lienLettre, lireRecommandation, messageRecommandation, type Recommandation } from '../lib/lettre';
+  import logoUrl from '../assets/logo-blason.png';
+
+  const bloc = document.querySelector<HTMLElement>('.recommander')!;
+  const form = bloc.querySelector<HTMLFormElement>('.rec-form')!;
+  const resultat = bloc.querySelector<HTMLElement>('.rec-resultat')!;
+  const toile = bloc.querySelector<HTMLCanvasElement>('.rec-image')!;
+  const statut = bloc.querySelector<HTMLElement>('.rec-statut')!;
+  let rec: Recommandation = { de: '', a: '', mot: '' };
+  let lien = '';
+  let dejaEnvoyee = '';
+
+  const charger = (src: string) =>
+    new Promise<HTMLImageElement>((ok, ko) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = ko;
+      i.src = src;
+    });
+
+  /** Coupe un texte en lignes qui tiennent dans la largeur. */
+  function lignes(c: CanvasRenderingContext2D, texte: string, largeur: number) {
+    const res: string[] = [];
+    let l = '';
+    for (const mot of texte.split(' ')) {
+      const essai = l ? `${l} ${mot}` : mot;
+      if (c.measureText(essai).width > largeur && l) {
+        res.push(l);
+        l = mot;
+      } else l = essai;
+    }
+    if (l) res.push(l);
+    return res;
+  }
+
+  /** L'image de la lettre (1080 × 1350) : papier crème, adresse, mot, signatures. */
+  async function dessiner() {
+    await Promise.all([document.fonts.load('700 60px Cinzel'), document.fonts.load('400 40px "Source Sans 3 Variable"')]);
+    const blason = await charger((logoUrl as any).src ?? (logoUrl as any));
+    const L = 1080;
+    const H = 1350;
+    const c = toile.getContext('2d')!;
+    const sans = (p: number, t: number, i = '') => `${i} ${p} ${t}px "Source Sans 3 Variable", "Segoe UI", sans-serif`;
+    c.clearRect(0, 0, L, H);
+    // Fond et papier.
+    c.fillStyle = '#b32d24';
+    c.fillRect(0, 0, L, H);
+    c.fillStyle = '#fffdf8';
+    c.shadowColor = 'rgba(0,0,0,.3)';
+    c.shadowBlur = 30;
+    c.fillRect(60, 60, L - 120, H - 120);
+    c.shadowBlur = 0;
+    c.strokeStyle = 'rgba(179,45,36,.35)';
+    c.lineWidth = 2;
+    c.strokeRect(84, 84, L - 168, H - 168);
+    c.textAlign = 'center';
+    // En-tête.
+    c.drawImage(blason, L / 2 - 40, 130, 80, 80);
+    c.fillStyle = '#b32d24';
+    c.font = '700 40px Cinzel';
+    c.fillText('HIMMELSWEG', L / 2, 270);
+    c.fillStyle = '#6b6158';
+    c.font = sans(600, 28);
+    c.fillText('LE CHEMIN DU CIEL · 7, 8 ET 9 MAI 2027', L / 2, 312);
+    // Adresse.
+    c.fillStyle = '#6b6158';
+    c.font = sans(400, 34, 'italic');
+    c.fillText("À l'attention de", L / 2, 420);
+    c.fillStyle = '#231c18';
+    let t = 70;
+    c.font = `700 ${t}px Cinzel`;
+    while (c.measureText(rec.a).width > L - 260 && t > 40) c.font = `700 ${(t -= 2)}px Cinzel`;
+    const nom = lignes(c, rec.a, L - 260).slice(0, 2);
+    nom.forEach((l, k) => c.fillText(l, L / 2, 500 + k * (t + 8)));
+    let y = 500 + nom.length * (t + 8) + 30;
+    c.fillStyle = '#b32d24';
+    c.font = sans(700, 40);
+    c.fillText(`${rec.de} vous recommande`, L / 2, y);
+    c.fillText('le pèlerinage Himmelsweg', L / 2, y + 52);
+    y += 130;
+    if (rec.mot) {
+      c.fillStyle = '#3d342e';
+      c.font = sans(400, 36, 'italic');
+      const ls = lignes(c, `« ${rec.mot} »`, L - 300).slice(0, 5);
+      ls.forEach((l, k) => c.fillText(l, L / 2, y + k * 50));
+      y += ls.length * 50 + 20;
+    }
+    // Signatures, sobrement.
+    const sy = Math.max(y + 40, 1010);
+    c.strokeStyle = 'rgba(179,45,36,.35)';
+    c.beginPath();
+    c.moveTo(L / 2 - 60, sy);
+    c.lineTo(L / 2 + 60, sy);
+    c.stroke();
+    c.fillStyle = '#7d1912';
+    c.font = '700 34px Cinzel';
+    c.fillText('Sarah  ·  Abbé Molin', L / 2, sy + 60);
+    c.fillStyle = '#6b6158';
+    c.font = sans(400, 28);
+    c.fillText('Présidente et aumônier du pèlerinage', L / 2, sy + 102);
+    c.fillStyle = '#6b6158';
+    c.font = sans(600, 30);
+    c.fillText('Une lettre vous attend : himmelsweg.fr/lettre', L / 2, H - 130);
+  }
+
+  const majLiens = () => {
+    lien = lienLettre(location.origin, rec);
+    const msg = messageRecommandation(rec, lien);
+    bloc.querySelector<HTMLAnchorElement>('.rec-whatsapp')!.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    bloc.querySelector<HTMLAnchorElement>('.rec-email')!.href = `mailto:?subject=${encodeURIComponent(`Une lettre pour ${rec.a} : le pèlerinage Himmelsweg`)}&body=${encodeURIComponent(msg)}`;
+    bloc.querySelector<HTMLAnchorElement>('.rec-sms')!.href = `sms:?&body=${encodeURIComponent(msg)}`;
+    bloc.querySelector<HTMLAnchorElement>('.rec-lien')!.href = lien;
+    return msg;
+  };
+
+  const fichier = () =>
+    new Promise<File>((ok) => toile.toBlob((b) => ok(new File([b!], 'lettre-himmelsweg.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.9));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const donnees = new FormData(form);
+    rec = lireRecommandation(new URLSearchParams(donnees as any));
+    const email = String(donnees.get('email') ?? '').trim();
+    if (!rec.de || !rec.a || !emailValide(email)) return form.reportValidity();
+    // Enregistrée une fois par lettre : préparer à nouveau la même lettre ne crée pas de doublon.
+    const cle = `${rec.de}|${rec.a}|${rec.mot}|${email}`;
+    if (cle !== dejaEnvoyee) {
+      dejaEnvoyee = cle;
+      enregistrerRecommandation(rec, email);
+    }
+    majLiens();
+    statut.textContent = '';
+    resultat.hidden = false;
+    await dessiner().catch(() => {});
+    resultat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  bloc.querySelector('.rec-partager')!.addEventListener('click', async () => {
+    const msg = majLiens();
+    const f = await fichier();
+    try {
+      if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f], text: msg });
+      else if (navigator.share) await navigator.share({ text: msg, url: lien });
+      else {
+        await navigator.clipboard.writeText(msg);
+        statut.textContent = 'Le message et le lien ont été copiés : collez-les dans votre messagerie.';
+      }
+    } catch {
+      // partage annulé
+    }
+  });
+  bloc.querySelector('.rec-copier')!.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(lien);
+      statut.textContent = 'Lien copié ✓';
+    } catch {
+      statut.textContent = lien;
+    }
+  });
+  bloc.querySelector('.rec-telecharger')!.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const url = URL.createObjectURL(await fichier());
+    Object.assign(document.createElement('a'), { href: url, download: 'lettre-himmelsweg.jpg' }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  });
+
+  // Arrivée depuis la lettre (« Nous souhaitons aider ») : le formulaire est prérempli.
+  const venu = lireRecommandation(new URLSearchParams(location.search));
+  const formAide = document.querySelector<HTMLFormElement>('form[data-sujet="Entreprises"]');
+  if (formAide && (venu.de || venu.a)) {
+    const sujet = formAide.querySelector<HTMLInputElement>('input[name="sujet"]');
+    if (sujet && venu.de) sujet.value = `Entreprises (recommandé par ${venu.de})`.slice(0, 50);
+    if (sujet && venu.de) formAide.dataset.sujet = sujet.value;
+    const nom = formAide.querySelector<HTMLInputElement>('input[name="nom"]');
+    if (nom && venu.a) nom.value = venu.a;
+    const message = formAide.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
+    if (message)
+      message.value = `Bonjour,\n\n${venu.de ? `Sur la recommandation de ${venu.de}, ` : ''}${venu.a || 'notre entreprise'} souhaite soutenir le pèlerinage Himmelsweg.\n\n`;
+  }
+</script>
+
+<style>
+  .recommander { margin: 3rem 0 2.5rem; background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: var(--rayon); padding: 1.6rem; box-shadow: 0 8px 28px rgba(0, 0, 0, .05); }
+  .rec-tete { display: flex; gap: 1.1rem; align-items: flex-start; margin-bottom: 1.2rem; }
+  .rec-tete h2 { margin-bottom: .35rem; }
+  .rec-tete p { margin: 0; }
+  .rec-logo { flex: none; }
+  .rec-aide { font-size: .9rem; color: #6b6158; margin: .3rem 0 0; }
+  .rec-form { display: grid; gap: .9rem; }
+  .rec-champs { display: grid; grid-template-columns: 1fr 1.4fr; gap: .9rem; }
+  .rec-resultat { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 1.6rem; align-items: center; margin-top: 1.6rem; }
+  .rec-resultat[hidden] { display: none; }
+  .rec-image { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
+  .rec-pret { font-weight: 700; margin: 0 0 .7rem; }
+  .rec-boutons { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+  .rec-astuce, .rec-voir { font-size: .95rem; color: #6b6158; margin: .4rem 0; }
+  .rec-voir a { font-weight: 600; }
+  .rec-statut { font-weight: 600; color: var(--rouge); min-height: 1.2em; }
+  .bouton-contour { background: transparent; color: var(--rouge); border: 2px solid var(--rouge); }
+  .bouton-contour:hover { background: var(--rouge); color: #fff; }
+  @media (max-width: 700px) {
+    .recommander { padding: 1.2rem; }
+    .rec-tete { flex-direction: column; align-items: center; text-align: center; }
+    .rec-champs, .rec-resultat { grid-template-columns: 1fr; }
+    .rec-image { max-width: 280px; margin: 0 auto; display: block; }
+  }
+</style>

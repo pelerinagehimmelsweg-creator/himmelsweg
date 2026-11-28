@@ -332,6 +332,10 @@ export function creerFirebase(config, urlScript, cleVapid) {
     ecouterBilans: (cb) => liste(collection(db, 'bilan'), cb),
     ecouterBilansFaits: (cb) => liste(collection(db, 'bilanFait'), cb),
     retenirTemoignage: (id, retenu) => updateDoc(doc(db, 'bilan', id), { retenu }),
+    // Recommandations d'entreprises laissées sur himmelsweg.fr (page Entreprises).
+    ecouterRecommandations: (cb) =>
+      liste(collection(db, 'recommandations'), (l) => cb(l.map((r) => ({ ...r, date: r.date?.toDate?.().toISOString() ?? '' })))),
+    supprimerRecommandation: (id) => deleteDoc(doc(db, 'recommandations', id)),
     siteLire: async () => script('site', { op: 'lire', idToken: await auth.currentUser.getIdToken() }),
     siteEcrire: async (chemin, contenu, sha) => script('site', { op: 'ecrire', idToken: await auth.currentUser.getIdToken(), chemin, contenu, sha }),
     sitePhoto: async (chemin, base64) => script('site', { op: 'photo', idToken: await auth.currentUser.getIdToken(), chemin, base64 }),

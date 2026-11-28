@@ -101,7 +101,7 @@ export function membresExemple() {
 }
 
 export const PERSONAS = [
-  { id: 'admin-directrice', nom: 'La directrice', detail: 'Administratrice : voit et gère tout' },
+  { id: 'admin-directrice', nom: 'La présidente', detail: 'Administratrice : voit et gère tout' },
   { id: 'm-F4', nom: 'Domitille', detail: 'Équipe repas' },
   { id: 'm-H4', nom: 'Damien', detail: 'Logistique : voit les fiches santé' },
   { id: 'm-H1', nom: 'Antoine', detail: 'Chef du chapitre Saint-Joseph' },
@@ -175,7 +175,7 @@ export const CONTENUS = [
     periode: 'apres',
     ordre: 1,
     titre: 'Merci !',
-    texte: 'Merci à chacun pour ces trois jours sur le chemin du Ciel. Texte à compléter par la directrice et l’aumônier.',
+    texte: 'Merci à chacun pour ces trois jours sur le chemin du Ciel. Texte à compléter par la présidente et l’aumônier.',
   },
 ];
 

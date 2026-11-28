@@ -1,0 +1,125 @@
+---
+// La lettre que reçoit un chef d'entreprise à qui l'on a recommandé le pèlerinage.
+// Le nom de l'entreprise, celui de la personne qui recommande et son mot viennent de l'adresse (?de=…&a=…&mot=…).
+import Base from '../layouts/Base.astro';
+import CarteChemin from '../components/CarteChemin.astro';
+import logo from '../assets/logo-blason.png';
+
+const SIGNATURES = [
+  { nom: 'Sarah', role: 'Présidente du pèlerinage' },
+  { nom: 'Abbé Molin', role: 'Aumônier du pèlerinage' },
+];
+---
+<Base titre="Une lettre pour vous" description="Le pèlerinage Himmelsweg vous écrit : trois jours de marche et de prière en Alsace, les 7, 8 et 9 mai 2027.">
+  <meta slot="tete" name="robots" content="noindex" />
+
+  <article class="l-lettre">
+    <div class="conteneur">
+      <div class="l-feuille">
+        <header class="l-entete">
+          <img src={logo.src} alt="" width="64" height="64" />
+          <p class="l-marque">Himmelsweg</p>
+          <p class="l-sous">Le Chemin du Ciel · 7, 8 et 9 mai 2027</p>
+        </header>
+
+        <p class="l-attention">À l'attention de la direction de <strong data-champ="a">votre entreprise</strong></p>
+
+        <figure class="l-mot" data-si="mot">
+          <blockquote>« <span data-champ="mot"></span> »</blockquote>
+          <figcaption>— <span data-champ="de"></span></figcaption>
+        </figure>
+
+        <p>Madame, Monsieur,</p>
+        <p data-si="de"><span data-champ="de"></span> a pensé à vous, et c'est à sa suite que nous vous écrivons.</p>
+        <p>
+          Les 7, 8 et 9 mai 2027, près de 150 pèlerins, hommes et femmes, marcheront trois jours à travers l'Alsace, de
+          Scherwiller à Colmar, par Ribeauvillé et Turckheim. C'est Himmelsweg, le Chemin du Ciel : trois jours de marche, de
+          prière et de chants, dans les vignes et les villages de notre région.
+        </p>
+
+        <div class="l-carte"><CarteChemin mode="accueil" /></div>
+
+        <p>
+          Pour accueillir chacun dans de bonnes conditions, nous cherchons le soutien d'entreprises d'ici.{' '}
+          <strong data-champ="a">Votre entreprise</strong> peut nous aider de trois façons :
+        </p>
+        <ul class="l-aides">
+          <li><strong>Une aide financière</strong>, sous forme de mécénat.</li>
+          <li><strong>Une aide en nature</strong> : produits, repas, prêt de matériel, réduction sur facture.</li>
+          <li><strong>Une aide logistique</strong> : transport, impression, communication.</li>
+        </ul>
+        <p class="l-fiscal">
+          Votre don ouvre droit à une <strong>réduction d'impôt de 60 % de son montant</strong> (mécénat d'entreprise), et nous
+          vous remettrons un reçu fiscal.
+        </p>
+        <p>
+          En retour, si vous le souhaitez, le logo de votre entreprise figurera sur notre site parmi ceux qui nous soutiennent. Et
+          pendant ces trois jours, les pèlerins prieront pour vous, pour vos salariés et pour vos familles.
+        </p>
+        <p>Avec notre gratitude,</p>
+
+        <div class="l-signatures">
+          {SIGNATURES.map((s) => (
+            <p><span class="l-nom">{s.nom}</span><br /><span class="l-role">{s.role}</span></p>
+          ))}
+        </div>
+
+        <div class="l-actions">
+          <a class="bouton l-aider" href="/entreprises/#aider">Nous souhaitons aider</a>
+          <a class="bouton bouton-clair-fonce" href="/le-pelerinage/">Découvrir le pèlerinage</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</Base>
+
+<script>
+  import { lireRecommandation } from '../lib/lettre';
+
+  const r = lireRecommandation(new URLSearchParams(location.search));
+  const valeurs: Record<string, string> = { de: r.de, a: r.a, mot: r.mot };
+  // Remplit les champs (en texte seulement), et cache ce qui n'a pas de valeur.
+  document.querySelectorAll<HTMLElement>('[data-champ]').forEach((e) => {
+    const v = valeurs[e.dataset.champ!];
+    if (v) e.textContent = v;
+  });
+  document.querySelectorAll<HTMLElement>('[data-si]').forEach((e) => {
+    if (!valeurs[e.dataset.si!]) e.hidden = true;
+  });
+  if (r.a) document.title = `Une lettre pour ${r.a} – Himmelsweg`;
+  const aider = document.querySelector<HTMLAnchorElement>('.l-aider')!;
+  const p = new URLSearchParams();
+  if (r.de) p.set('de', r.de);
+  if (r.a) p.set('a', r.a);
+  aider.href = `/entreprises/${p.size ? `?${p}` : ''}#aider`;
+
+</script>
+
+<style>
+
+
+  .l-lettre { padding: 2rem 0 4rem; }
+  .l-feuille { animation: l-fondu .8s both; }
+  .l-feuille { max-width: 46rem; margin: 0 auto; background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: 6px; box-shadow: 0 16px 50px rgba(35, 28, 24, .12); padding: clamp(1.4rem, 5vw, 3.5rem); font-size: 1.12rem; line-height: 1.65; }
+  .l-entete { text-align: center; margin-bottom: 2rem; }
+  .l-entete img { display: block; margin: 0 auto; }
+  .l-marque { font-family: var(--titre); font-weight: 700; color: var(--rouge); letter-spacing: .1em; text-transform: uppercase; font-size: 1.5rem; margin: .4rem 0 0; }
+  .l-sous { color: #6b6158; margin: 0; font-size: .95rem; }
+  .l-attention { font-style: italic; color: #6b6158; }
+  .l-attention strong { font-style: normal; color: var(--encre); }
+  .l-mot { margin: 1.6rem 0; padding: 1rem 1.3rem; border-left: 4px solid var(--rouge); background: var(--creme); border-radius: 0 8px 8px 0; }
+  .l-mot blockquote { margin: 0; font-style: italic; font-size: 1.2rem; }
+  .l-mot figcaption { margin-top: .4rem; font-weight: 700; }
+  .l-carte { max-width: 300px; margin: 1.5rem auto; }
+  .l-aides { padding-left: 1.2rem; }
+  .l-aides li { margin: .3rem 0; }
+  .l-fiscal { background: var(--creme); border-radius: 8px; padding: .8rem 1rem; }
+  .l-signatures { display: flex; justify-content: space-around; gap: 1.5rem; flex-wrap: wrap; margin: 1.8rem 0 2rem; text-align: center; }
+  .l-nom { font-family: var(--titre); font-weight: 700; font-size: 1.25rem; color: var(--rouge-fonce); }
+  .l-role { font-size: .95rem; color: #6b6158; }
+  .l-actions { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; }
+  .bouton-clair-fonce { background: transparent; color: var(--rouge); border: 2px solid var(--rouge); }
+
+  @keyframes l-fondu { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .l-feuille { animation: none; } }
+</style>

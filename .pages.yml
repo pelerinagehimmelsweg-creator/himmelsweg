@@ -99,6 +99,20 @@ content:
               label: Formulaire de contact
             - value: entreprises
               label: Formulaire entreprises (avec type d'aide)
+      - name: partenaires
+        label: Entreprises qui nous soutiennent (facultatif, logos affichés sur la page)
+        type: object
+        list: true
+        fields:
+          - name: nom
+            label: Nom de l'entreprise
+            type: string
+          - name: logo
+            label: Logo
+            type: image
+          - name: lien
+            label: Site de l'entreprise (facultatif)
+            type: string
 
   - name: accueil
     label: Page d'accueil

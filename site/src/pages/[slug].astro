@@ -7,6 +7,8 @@ import TitrePage from '../components/TitrePage.astro';
 import WidgetHelloAsso from '../components/WidgetHelloAsso.astro';
 import FormulaireContact from '../components/FormulaireContact.astro';
 import CarteChemin from '../components/CarteChemin.astro';
+import Recommander from '../components/Recommander.astro';
+import { Image as Img } from 'astro:assets';
 import { html } from '../lib/donnees';
 
 export async function getStaticPaths() {
@@ -36,10 +38,27 @@ const ancre = (t?: string | null) => (t ? t.toLowerCase().normalize('NFD').repla
             {d.bouton?.texte && d.bouton?.lien && <p><a class="bouton" href={d.bouton.lien}>{d.bouton.texte}</a></p>}
           </div>
           {formulaire && (
-            <div class="carte"><FormulaireContact sujet={formulaire === 'entreprises' ? 'Entreprises' : 'Contact'} choixAide={formulaire === 'entreprises'} /></div>
+            <div class="carte" id={formulaire === 'entreprises' ? 'aider' : undefined}><FormulaireContact sujet={formulaire === 'entreprises' ? 'Entreprises' : 'Contact'} choixAide={formulaire === 'entreprises'} /></div>
           )}
         </div>
       )}
+      {page.id === 'entreprises' && <Recommander />}
+
+      {d.partenaires && d.partenaires.length > 0 && (
+        <div class="partenaires">
+          <h2 class="centre">Ils nous soutiennent</h2>
+          <ul>
+            {d.partenaires.map((e) => (
+              <li>
+                <a href={e.lien || undefined} target={e.lien ? '_blank' : undefined} rel="noopener" title={e.nom}>
+                  {e.logo ? <Img src={e.logo} alt={e.nom} height={80} /> : <span>{e.nom}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {!aDuTexte && formulaire && (
         <div class="carte etroit"><FormulaireContact sujet={formulaire === 'entreprises' ? 'Entreprises' : 'Contact'} choixAide={formulaire === 'entreprises'} /></div>
       )}

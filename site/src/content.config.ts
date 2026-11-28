@@ -27,6 +27,10 @@ const pages = defineCollection({
         .nullable(),
       formulaire: z.preprocess(vide, z.enum(['aucun', 'contact', 'entreprises']).optional().nullable()),
       bouton: z.object({ texte: z.string().optional().nullable(), lien: z.string().optional().nullable() }).optional().nullable(),
+      partenaires: z
+        .array(z.object({ nom: z.string(), logo: photo(image), lien: z.string().optional().nullable() }))
+        .optional()
+        .nullable(),
     }),
 });
 

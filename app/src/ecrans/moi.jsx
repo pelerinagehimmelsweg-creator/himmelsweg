@@ -67,6 +67,9 @@ export function Moi({ donnees, session }) {
             <a class="bouton secondaire" href="#/admin/bilan">
               Questionnaire de fin
             </a>
+            <a class="bouton secondaire" href="#/admin/recommandations">
+              Recommandations d’entreprises
+            </a>
           </div>
         </section>
       )}
