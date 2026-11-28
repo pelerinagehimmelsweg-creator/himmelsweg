@@ -1,0 +1,187 @@
+---
+// La « lettre scellée » qu'ouvre un chef d'entreprise à qui l'on a recommandé le pèlerinage.
+// Le nom de l'entreprise, celui de la personne qui recommande et son mot viennent de l'adresse (?de=…&a=…&mot=…).
+import Base from '../layouts/Base.astro';
+import CarteChemin from '../components/CarteChemin.astro';
+import logo from '../assets/logo-blason.png';
+
+const SIGNATURES = [
+  { nom: 'Sarah', role: 'Présidente du pèlerinage' },
+  { nom: 'Abbé Molin', role: 'Aumônier du pèlerinage' },
+];
+---
+<Base titre="Une lettre pour vous" description="Le pèlerinage Himmelsweg vous écrit : trois jours de marche et de prière en Alsace, les 7, 8 et 9 mai 2027.">
+  <meta slot="tete" name="robots" content="noindex" />
+
+  <section class="l-scene" aria-label="Enveloppe">
+    <p class="l-pour"><span class="l-pour-petit">Une lettre pour</span> <strong data-champ="a">vous</strong></p>
+    <div class="l-enveloppe">
+      <div class="l-dos"></div>
+      <div class="l-papier"></div>
+      <div class="l-devant"></div>
+      <div class="l-rabat"></div>
+      <button type="button" class="l-sceau" aria-label="Briser le sceau et ouvrir la lettre">
+        <span class="l-moitie g"><img src={logo.src} alt="" /></span>
+        <span class="l-moitie d"><img src={logo.src} alt="" /></span>
+      </button>
+    </div>
+    <p class="l-consigne">Touchez le sceau pour ouvrir</p>
+    <p class="l-de" data-si="de">de la part de <span data-champ="de"></span></p>
+  </section>
+
+  <article class="l-lettre" hidden>
+    <div class="conteneur">
+      <div class="l-feuille">
+        <header class="l-entete">
+          <img src={logo.src} alt="" width="64" height="64" />
+          <p class="l-marque">Himmelsweg</p>
+          <p class="l-sous">Le Chemin du Ciel · 7, 8 et 9 mai 2027</p>
+        </header>
+
+        <p class="l-attention">À l'attention de la direction de <strong data-champ="a">votre entreprise</strong></p>
+
+        <figure class="l-mot" data-si="mot">
+          <blockquote>« <span data-champ="mot"></span> »</blockquote>
+          <figcaption>— <span data-champ="de"></span></figcaption>
+        </figure>
+
+        <p>Madame, Monsieur,</p>
+        <p data-si="de"><span data-champ="de"></span> a pensé à vous, et c'est à sa suite que nous vous écrivons.</p>
+        <p>
+          Les 7, 8 et 9 mai 2027, près de 150 pèlerins, hommes et femmes, marcheront trois jours à travers l'Alsace, de
+          Scherwiller à Colmar, par Ribeauvillé et Turckheim. C'est Himmelsweg, le Chemin du Ciel : trois jours de marche, de
+          prière et de chants, dans les vignes et les villages de notre région.
+        </p>
+
+        <div class="l-carte"><CarteChemin mode="accueil" /></div>
+
+        <p>
+          Pour accueillir chacun dans de bonnes conditions, nous cherchons le soutien d'entreprises d'ici.{' '}
+          <strong data-champ="a">Votre entreprise</strong> peut nous aider de trois façons :
+        </p>
+        <ul class="l-aides">
+          <li><strong>Une aide financière</strong>, sous forme de mécénat.</li>
+          <li><strong>Une aide en nature</strong> : produits, repas, prêt de matériel, réduction sur facture.</li>
+          <li><strong>Une aide logistique</strong> : transport, impression, communication.</li>
+        </ul>
+        <p class="l-fiscal">
+          Votre don ouvre droit à une <strong>réduction d'impôt de 60 % de son montant</strong> (mécénat d'entreprise), et nous
+          vous remettrons un reçu fiscal.
+        </p>
+        <p>
+          En retour, si vous le souhaitez, le logo de votre entreprise figurera sur notre site parmi ceux qui nous soutiennent. Et
+          pendant ces trois jours, les pèlerins prieront pour vous, pour vos salariés et pour vos familles.
+        </p>
+        <p>Avec notre gratitude,</p>
+
+        <div class="l-signatures">
+          {SIGNATURES.map((s) => (
+            <p><span class="l-nom">{s.nom}</span><br /><span class="l-role">{s.role}</span></p>
+          ))}
+        </div>
+
+        <div class="l-actions">
+          <a class="bouton l-aider" href="/entreprises/#aider">Nous souhaitons aider</a>
+          <a class="bouton bouton-clair-fonce" href="/le-pelerinage/">Découvrir le pèlerinage</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</Base>
+
+<script>
+  import { lireRecommandation } from '../lib/lettre';
+
+  const r = lireRecommandation(new URLSearchParams(location.search));
+  const valeurs: Record<string, string> = { de: r.de, a: r.a, mot: r.mot };
+  // Remplit les champs (en texte seulement), et cache ce qui n'a pas de valeur.
+  document.querySelectorAll<HTMLElement>('[data-champ]').forEach((e) => {
+    const v = valeurs[e.dataset.champ!];
+    if (v) e.textContent = v;
+  });
+  document.querySelectorAll<HTMLElement>('[data-si]').forEach((e) => {
+    if (!valeurs[e.dataset.si!]) e.hidden = true;
+  });
+  if (r.a) document.title = `Une lettre pour ${r.a} – Himmelsweg`;
+  const aider = document.querySelector<HTMLAnchorElement>('.l-aider')!;
+  const p = new URLSearchParams();
+  if (r.de) p.set('de', r.de);
+  if (r.a) p.set('a', r.a);
+  aider.href = `/entreprises/${p.size ? `?${p}` : ''}#aider`;
+
+  const scene = document.querySelector<HTMLElement>('.l-scene')!;
+  const lettre = document.querySelector<HTMLElement>('.l-lettre')!;
+  const calme = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let ouverte = false;
+  const ouvrir = () => {
+    if (ouverte) return;
+    ouverte = true;
+    scene.classList.add('brise');
+    setTimeout(() => scene.classList.add('ouverte'), calme ? 0 : 500);
+    setTimeout(
+      () => {
+        scene.hidden = true;
+        lettre.hidden = false;
+        lettre.classList.add('arrive');
+        scrollTo({ top: 0 });
+      },
+      calme ? 0 : 2100,
+    );
+  };
+  document.querySelector('.l-sceau')!.addEventListener('click', ouvrir);
+  scene.querySelector('.l-enveloppe')!.addEventListener('click', ouvrir);
+</script>
+
+<style>
+  .l-scene { min-height: calc(100vh - 140px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; padding: 2rem 1rem 3rem; background: radial-gradient(ellipse at center, var(--blanc), var(--creme) 70%); text-align: center; }
+  .l-scene[hidden] { display: none; }
+  .l-pour { font-family: var(--titre); font-size: clamp(1.4rem, 5vw, 2.2rem); color: var(--rouge-fonce); margin: 0; line-height: 1.25; animation: l-monte .9s .2s both; }
+  .l-pour-petit { display: block; font-family: var(--texte); font-size: 1rem; color: #6b6158; font-style: italic; }
+  .l-de { margin: 0; color: #6b6158; font-style: italic; animation: l-monte .9s .5s both; }
+  .l-de span { font-style: normal; font-weight: 700; color: var(--encre); }
+  .l-consigne { margin: 0; font-size: .95rem; color: var(--rouge); font-weight: 600; animation: l-monte .9s 1s both, l-pulse 2s 2s infinite; }
+  .brise .l-consigne, .brise .l-de { opacity: 0; transition: opacity .3s; animation: none; }
+
+  .l-enveloppe { position: relative; width: min(86vw, 420px); aspect-ratio: 3 / 2; cursor: pointer; perspective: 900px; animation: l-monte 1s both; margin-top: clamp(7rem, 38vw, 10rem); }
+  .l-dos, .l-devant, .l-rabat, .l-papier { position: absolute; inset: 0; border-radius: 6px; }
+  .l-dos { background: #e9dfc8; box-shadow: 0 18px 40px rgba(35, 28, 24, .25); }
+  .l-papier { inset: 8% 6% 6%; background: var(--blanc); border-radius: 3px; transition: transform 1.1s cubic-bezier(.3, .7, .3, 1); }
+  .l-devant { background: linear-gradient(135deg, #f3ead6 50%, transparent 50%) left / 50.5% 100% no-repeat, linear-gradient(225deg, #f3ead6 50%, transparent 50%) right / 50.5% 100% no-repeat, linear-gradient(0deg, #efe4cc 50%, transparent 50%); clip-path: polygon(0 0, 50% 58%, 100% 0, 100% 100%, 0 100%); }
+  .l-rabat { height: 62%; background: linear-gradient(180deg, #f6eedc, #e6d9bc); clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: top; transition: transform .8s ease-in-out; z-index: 2; }
+  .l-sceau { position: absolute; left: 50%; top: 58%; width: 84px; height: 84px; margin: -42px 0 0 -42px; border: 0; padding: 0; background: none; cursor: pointer; z-index: 3; }
+  .l-moitie { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #d2473b, #a3271f 65%, #7d1912); box-shadow: 0 4px 10px rgba(0, 0, 0, .35), inset 0 0 0 7px rgba(255, 255, 255, .08); display: grid; place-items: center; transition: transform .7s cubic-bezier(.5, 0, .7, 1), opacity .7s; }
+  .l-moitie img { width: 52px; height: 52px; }
+  .l-moitie.g { clip-path: polygon(0 0, 54% 0, 46% 40%, 55% 62%, 44% 100%, 0 100%); }
+  .l-moitie.d { clip-path: polygon(54% 0, 100% 0, 100% 100%, 44% 100%, 55% 62%, 46% 40%); }
+  .l-sceau:focus-visible { outline: 3px solid var(--rouge); outline-offset: 4px; border-radius: 50%; }
+  .brise .l-moitie.g { transform: translate(-40px, 70px) rotate(-35deg); opacity: 0; }
+  .brise .l-moitie.d { transform: translate(40px, 80px) rotate(30deg); opacity: 0; }
+  .ouverte .l-rabat { transform: rotateX(180deg); z-index: 0; }
+  .ouverte .l-papier { transform: translateY(-55%); transition-delay: .5s; }
+
+  .l-lettre { padding: 2rem 0 4rem; }
+  .l-lettre.arrive .l-feuille { animation: l-monte 1s both; }
+  .l-feuille { max-width: 46rem; margin: 0 auto; background: var(--blanc); border: 1px solid var(--creme-fonce); border-radius: 6px; box-shadow: 0 16px 50px rgba(35, 28, 24, .12); padding: clamp(1.4rem, 5vw, 3.5rem); font-size: 1.12rem; line-height: 1.65; }
+  .l-entete { text-align: center; margin-bottom: 2rem; }
+  .l-entete img { display: block; margin: 0 auto; }
+  .l-marque { font-family: var(--titre); font-weight: 700; color: var(--rouge); letter-spacing: .1em; text-transform: uppercase; font-size: 1.5rem; margin: .4rem 0 0; }
+  .l-sous { color: #6b6158; margin: 0; font-size: .95rem; }
+  .l-attention { font-style: italic; color: #6b6158; }
+  .l-attention strong { font-style: normal; color: var(--encre); }
+  .l-mot { margin: 1.6rem 0; padding: 1rem 1.3rem; border-left: 4px solid var(--rouge); background: var(--creme); border-radius: 0 8px 8px 0; }
+  .l-mot blockquote { margin: 0; font-style: italic; font-size: 1.2rem; }
+  .l-mot figcaption { margin-top: .4rem; font-weight: 700; }
+  .l-carte { max-width: 300px; margin: 1.5rem auto; }
+  .l-aides { padding-left: 1.2rem; }
+  .l-aides li { margin: .3rem 0; }
+  .l-fiscal { background: var(--creme); border-radius: 8px; padding: .8rem 1rem; }
+  .l-signatures { display: flex; justify-content: space-around; gap: 1.5rem; flex-wrap: wrap; margin: 1.8rem 0 2rem; text-align: center; }
+  .l-nom { font-family: var(--titre); font-weight: 700; font-size: 1.25rem; color: var(--rouge-fonce); }
+  .l-role { font-size: .95rem; color: #6b6158; }
+  .l-actions { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; }
+  .bouton-clair-fonce { background: transparent; color: var(--rouge); border: 2px solid var(--rouge); }
+
+  @keyframes l-monte { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+  @keyframes l-pulse { 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .l-scene *, .l-feuille { animation: none !important; transition: none !important; } }
+</style>

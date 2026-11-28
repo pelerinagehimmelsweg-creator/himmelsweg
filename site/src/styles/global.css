@@ -187,3 +187,9 @@ p { margin: 0 0 1em; }
   .etapes-carte .etapes-plan .carte-chemin { max-height: 30vh; }
   .etapes-plan { box-shadow: 0 8px 12px -10px rgba(35, 28, 24, .25); }
 }
+
+/* Entreprises : logos de celles qui soutiennent le pèlerinage. */
+.partenaires { margin: 2.5rem 0; }
+.partenaires ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1.2rem 2rem; justify-content: center; align-items: center; }
+.partenaires img { height: 64px; width: auto; filter: grayscale(.2); }
+.partenaires span { font-weight: 700; color: var(--encre); }

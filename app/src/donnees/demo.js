@@ -91,7 +91,7 @@ export function creerDemo() {
   const session = () => {
     if (!sessionId) return null;
     if (sessionId === 'admin-directrice') {
-      return { id: sessionId, prenom: 'La directrice', nom: '', estAdmin: true, roles: [] };
+      return { id: sessionId, prenom: 'La présidente', nom: '', estAdmin: true, roles: [] };
     }
     const m = etat.membres.find((x) => x.id === sessionId);
     return m ? { ...m, estAdmin: false } : null;

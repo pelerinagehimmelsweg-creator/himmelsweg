@@ -23,7 +23,7 @@ export const GROUPES = { H: 'Hommes', F: 'Femmes' };
 export const RUBRIQUES = [
   { id: 'infos', titre: 'Onglet Infos' },
   { id: 'prier', titre: 'Onglet Prier (chants et prières)' },
-  { id: 'accueil', titre: 'Accueil : mot de l’aumônier ou de la directrice' },
+  { id: 'accueil', titre: 'Accueil : mot de l’aumônier ou de la présidente' },
   { id: 'apres', titre: 'Accueil après le pèlerinage (merci, questionnaire…)' },
 ];
 
