@@ -12,6 +12,7 @@ import { Accueil } from './ecrans/accueil.jsx';
 import { FicheMembre, ListeMembres } from './ecrans/membres.jsx';
 import { AdminInscriptions, AdminQuestionnaire } from './ecrans/admin.jsx';
 import { AdminBilan, Bilan } from './ecrans/bilan.jsx';
+import { AdminRecommandations } from './ecrans/recommandations.jsx';
 import { AdminOrganisation } from './ecrans/organisation.jsx';
 import { EnvoiNotification, Equipe, voitEquipe } from './ecrans/equipe.jsx';
 import { Moi, ModifierMesReponses } from './ecrans/moi.jsx';
@@ -102,6 +103,8 @@ export function App({ donnees }) {
         <AdminOrganisation donnees={donnees} chapitreId={detail} />
       ) : sous === 'bilan' ? (
         <AdminBilan donnees={donnees} />
+      ) : sous === 'recommandations' ? (
+        <AdminRecommandations donnees={donnees} />
       ) : sous === 'notification' ? (
         <EnvoiNotification donnees={donnees} />
       ) : (

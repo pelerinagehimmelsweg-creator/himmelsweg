@@ -192,6 +192,20 @@ service cloud.firestore {
       allow read, write: if estAdmin();
     }
 
+    // Recommandations d'entreprises envoyées depuis himmelsweg.fr, sans compte (page Entreprises).
+    // Chacun peut en créer une, bien formée ; seuls les admins les lisent et les effacent.
+    match /recommandations/{id} {
+      allow read, delete: if estAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['de', 'email', 'entreprise', 'mot', 'date'])
+        && request.resource.data.de is string && request.resource.data.de.size() > 0 && request.resource.data.de.size() <= 40
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+[.][^@\\s]+$')
+        && request.resource.data.entreprise is string && request.resource.data.entreprise.size() > 0
+        && request.resource.data.entreprise.size() <= 80
+        && request.resource.data.mot is string && request.resource.data.mot.size() <= 280
+        && request.resource.data.date == request.time;
+    }
+
     match /{autre=**} {
       allow read, write: if false;
     }
