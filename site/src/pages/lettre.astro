@@ -3,7 +3,24 @@
 // Le nom de l'entreprise, celui de la personne qui recommande et son mot viennent de l'adresse (?de=…&a=…&mot=…).
 import Base from '../layouts/Base.astro';
 import CarteChemin from '../components/CarteChemin.astro';
+import Carrousel from '../components/Carrousel.astro';
+import vignes from '../assets/photos/vignes-banniere-doree.jpg';
+import chemin from '../assets/photos/chemin-banniere.jpg';
+import plaine from '../assets/photos/plaine-alsace.jpg';
+import chapelet from '../assets/photos/chapelet-mains.jpg';
+import rocher from '../assets/photos/banniere-rocher.jpg';
+import chateau from '../assets/photos/chateau-colline.jpg';
 import logo from '../assets/logo-blason.png';
+
+// Photos de la communication : de dos ou de loin seulement, jamais de visage.
+const PHOTOS = [
+  { src: vignes, alt: 'Une pèlerine en costume alsacien marche dans les vignes, derrière la bannière', position: 'center 30%' },
+  { src: chemin, alt: 'Deux pèlerines et la bannière du pèlerinage face aux collines' },
+  { src: plaine, alt: "La plaine d'Alsace et le vignoble en automne" },
+  { src: chapelet, alt: 'Un chapelet entre les mains, sur un tablier alsacien', position: 'center 62%' },
+  { src: rocher, alt: 'Pèlerines et bannière sur un rocher dominant le vignoble' },
+  { src: chateau, alt: 'Un château sur les collines boisées des Vosges' },
+];
 
 const SIGNATURES = [
   { nom: 'Sarah', role: 'Présidente du pèlerinage' },
@@ -36,6 +53,8 @@ const SIGNATURES = [
           Scherwiller à Colmar, par Ribeauvillé et Turckheim. C'est Himmelsweg, le Chemin du Ciel : trois jours de marche, de
           prière et de chants, dans les vignes et les villages de notre région.
         </p>
+
+        <Carrousel photos={PHOTOS} />
 
         <div class="l-carte"><CarteChemin mode="accueil" /></div>
 
