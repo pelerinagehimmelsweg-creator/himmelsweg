@@ -1,7 +1,8 @@
 ---
 title: Programme
 description: Le programme des trois jours de marche du pèlerinage Himmelsweg, 7-8-9 mai 2027.
-banniere: ../../assets/photos/paysage-chateau.jpg
+banniere: ../../assets/photos/chemin-banniere.jpg
+position_banniere: center 55%
 etapes:
   - jour: Vendredi
     date: 7 mai

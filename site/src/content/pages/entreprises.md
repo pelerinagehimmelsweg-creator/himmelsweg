@@ -1,6 +1,7 @@
 ---
 title: Entreprises alsaciennes
 description: Entreprises alsaciennes, soutenez le pèlerinage Himmelsweg.
+banniere: ../../assets/photos/plaine-alsace.jpg
 formulaire: entreprises
 ---
 Vous êtes sensible à notre projet ? Vous pouvez aider Himmelsweg !

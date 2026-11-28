@@ -1,6 +1,7 @@
 ---
 title: Sainte Odile
 description: Sainte Odile, patronne de l'Alsace, dont les reliques ont accompagné le pèlerinage Himmelsweg 2026.
+banniere: ../../assets/photos/montagne-soir.jpg
 photo: ../../assets/photos/sainte-odile.jpg
 ---
 **En 2026, les reliques de sainte Odile ont été présentes pendant tout le pèlerinage Himmelsweg.**

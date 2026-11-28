@@ -1,5 +1,7 @@
 // Accueil du pèlerin : il change tout seul selon le moment (avant, pendant, après le pèlerinage).
 import { useState } from 'preact/hooks';
+import photoAccueilF from '../composants/photos/accueil-f.jpg';
+import photoAccueilH from '../composants/photos/accueil-h.jpg';
 import { useAbonnement } from '../composants/base.jsx';
 import { JOURS, aujourdhui, droits, joursAvant, momentDu } from '../donnees/modele.js';
 import { lienCarte } from '../donnees/equipes.js';
@@ -62,7 +64,10 @@ export function Accueil({ donnees, session }) {
           </select>
         </label>
       )}
-      <h1>{session.prenom ? `Bienvenue, ${session.prenom}` : 'Bienvenue'}</h1>
+      <div class="accueil-photo">
+        <img src={session.groupe === 'H' ? photoAccueilH : photoAccueilF} alt="" />
+        <h1>{session.prenom ? `Bienvenue, ${session.prenom}` : 'Bienvenue'}</h1>
+      </div>
 
       {moment === 'avant' && <CompteARebours />}
       {session.statut === 'en_attente' && (
